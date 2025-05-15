@@ -401,8 +401,15 @@ async def get_recommendations(
         
         query = {}
         if category:
-            query['category'] = category
+            # Special case for "reclamation" category which might not exist
+            if category.lower() == "reclamation":
+                # Try a case-insensitive search across all categories
+                # This looks for any category containing "claim" or similar words
+                query['category'] = {"$regex": "claim|request|complaint|reclamation", "$options": "i"}
+            else:
+                query['category'] = category
             print(f"Filtering by category: {category}")
+            
         if price_min is not None or price_max is not None:
             price_q = {}
             if price_min is not None:
@@ -415,6 +422,11 @@ async def get_recommendations(
         total_books = await recommended_books_collection.count_documents({})
         print(f"Total books in collection: {total_books}")
         
+        # If no books in database, trigger scraping
+        if total_books == 0:
+            print("No books found in database. Triggering scraping...")
+            await scrape_books()
+            
         books = []
         async for b in recommended_books_collection.find(query):
             b['_id'] = str(b['_id'])
@@ -422,11 +434,22 @@ async def get_recommendations(
         
         print(f"Found {len(books)} books matching query: {query}")
         
-        # If no books found and it's a "reclamation" category, try to find similar categories
+        # If still no books found with "reclamation" category, return books from a default category
         if len(books) == 0 and category and category.lower() == "reclamation":
-            print("No books found for 'reclamation' category, checking available categories")
+            print("No books found for 'reclamation' category, returning default books")
             available_categories = await recommended_books_collection.distinct("category")
             print(f"Available categories: {available_categories}")
+            
+            # If we have categories, pick the first one as default
+            if available_categories:
+                default_category = available_categories[0]
+                print(f"Using default category: {default_category}")
+                default_books = []
+                async for b in recommended_books_collection.find({"category": default_category}):
+                    b['_id'] = str(b['_id'])
+                    b['note'] = "No books found in 'reclamation' category. Showing default category instead."
+                    default_books.append(b)
+                return default_books
             
         return books
     except Exception as e:
@@ -587,3 +610,68 @@ async def get_user_submissions(user_id: str):
         s["_id"] = str(s["_id"])
         submissions.append(s)
     return submissions
+
+
+# Admin endpoint to check for duplicate emails
+@app.get("/admin/duplicate-users")
+async def check_duplicate_users():
+    """
+    Admin endpoint to check for duplicate emails in the database
+    """
+    try:
+        # Create an aggregation pipeline to find duplicates
+        pipeline = [
+            {"$group": {"_id": "$email", "count": {"$sum": 1}, "ids": {"$push": "$_id"}}},
+            {"$match": {"count": {"$gt": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        
+        duplicates = []
+        async for doc in etudiants_collection.aggregate(pipeline):
+            # Convert ObjectIds to strings
+            ids = [str(id) for id in doc["ids"]]
+            duplicates.append({
+                "email": doc["_id"],
+                "count": doc["count"],
+                "user_ids": ids
+            })
+            
+        return {
+            "total_duplicates": len(duplicates),
+            "duplicate_emails": duplicates
+        }
+    except Exception as e:
+        logger.error(f"Error checking for duplicates: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+# Endpoint to fix a specific duplicate email by removing extra copies
+@app.delete("/admin/fix-duplicate/{email}")
+async def fix_duplicate_email(email: str):
+    """
+    Fix duplicate users by keeping only the first user with this email
+    """
+    try:
+        # Find all users with this email
+        users = await etudiants_collection.find({"email": email}).to_list(length=100)
+        
+        if len(users) <= 1:
+            return {"message": "No duplicates found for this email"}
+        
+        # Keep the first user (presumably the original one)
+        keep_id = users[0]["_id"]
+        
+        # Create a list of IDs to delete (all except the first one)
+        delete_ids = [user["_id"] for user in users[1:]]
+        
+        # Delete the duplicate users
+        result = await etudiants_collection.delete_many({"_id": {"$in": delete_ids}})
+        
+        return {
+            "message": f"Fixed duplicate for email: {email}",
+            "kept_user_id": str(keep_id),
+            "deleted_count": result.deleted_count,
+            "deleted_ids": [str(id) for id in delete_ids]
+        }
+    except Exception as e:
+        logger.error(f"Error fixing duplicate: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
