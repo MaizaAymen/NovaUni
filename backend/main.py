@@ -22,24 +22,15 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 app = FastAPI()
 
 # CORS middleware setup
-origins = [
-    "http://localhost:5173",  # React local dev server
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",  # Another React dev server port
-    "http://127.0.0.1:5174",
-    "http://localhost:3000",  # Another common dev port
-    "http://127.0.0.1:3000", 
-    "http://localhost",      # Any port on localhost
-    "http://127.0.0.1",
-    "*",                     # Allow all origins for testing (remove in production)
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allow these origins
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # seul valeur
