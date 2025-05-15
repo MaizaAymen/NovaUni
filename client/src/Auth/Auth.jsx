@@ -294,9 +294,7 @@ const Auth = () => {
             {isSignup ? "Already have an account? Login" : "Don't have an account? Sign Up"}
           </button>
         </div>
-      </div>
-
-      <style jsx>{`
+      </div>      <style>{`
         /* Base styles */
         .auth-container {
           display: flex;

@@ -45,8 +45,7 @@ const HomePages = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner homepage-spinner"></div>
-        <p>Loading...</p>
-        <style jsx>{`
+        <p>Loading...</p>        <style>{`
           .loading-container {
             display: flex;
             flex-direction: column;
@@ -98,8 +97,7 @@ const HomePages = () => {
             <h1>Please login to continue</h1>
           )}
         </div>
-      </div>
-      <style jsx>{`
+      </div>      <style>{`
         .container {
           font-family: 'Poppins', sans-serif;
         }
