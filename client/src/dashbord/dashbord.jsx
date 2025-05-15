@@ -417,7 +417,7 @@ export default function Dashboard() {
       </div>
 
       {/* Add responsive styles */}
-      <style>{`
+      <style jsx>{`
         @media (max-width: 768px) {
           aside {
             width: 80px !important;

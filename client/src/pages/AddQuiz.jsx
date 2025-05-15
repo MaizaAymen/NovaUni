@@ -163,7 +163,7 @@ export default function AddQuiz() {
     </div>
   </div>
 
-      <style>{`
+      <style jsx>{`
         /* Base styles */
         .add-quiz-container {
           font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;

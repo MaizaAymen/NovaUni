@@ -243,7 +243,7 @@ const HomePages = () => {
       </footer>
 
       {/* CSS Styles */}
-      <style>{`
+      <style jsx>{`
         /* Base styles for the container */
         .container {
           font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
