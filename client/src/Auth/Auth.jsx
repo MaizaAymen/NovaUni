@@ -56,15 +56,16 @@ const Auth = () => {
         };
 
     console.log("Submitting to:", url, "with payload:", { ...payload, password: "HIDDEN" })
-        
-    try {
+          try {
       // Add timeout to prevent infinite loading
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);  // Increase timeout to 30 seconds
+      
+      console.log(`Attempting to connect to ${url}...`);
       
       const response = await axios.post(url, payload, {
         signal: controller.signal,
-        timeout: 15000, // Timeout after 15 seconds
+        timeout: 30000, // Increase timeout to 30 seconds
       });
       
       clearTimeout(timeoutId);

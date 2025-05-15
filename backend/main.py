@@ -160,23 +160,36 @@ class LoginModel(BaseModel):
 
 @app.post("/login")
 async def login(login: LoginModel):
-    # Fetch user by email
-    user = await etudiants_collection.find_one({"email": login.email})
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    
-    # Check if password matches
-    if user.get("password") != login.password:
-        raise HTTPException(status_code=401, detail="Invalid password")
-    
-    # Convert ObjectId to string
-    user["_id"] = str(user["_id"])
-    # Make sure admin is a boolean
-    if "admin" not in user:
-        user["admin"] = False
-    # Remove password from response
-    user.pop("password", None)
-    return {"user": user}
+    try:
+        # Fetch user by email with a timeout
+        user = await etudiants_collection.find_one(
+            {"email": login.email},
+            max_time_ms=5000  # 5 second timeout for the query
+        )
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+            
+        # Check if password is provided and matches
+        if not login.password or (user.get("password") != login.password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+            
+        # Convert ObjectId to string
+        user["_id"] = str(user["_id"])
+        
+        # Make sure admin is a boolean
+        if "admin" not in user:
+            user["admin"] = False
+            
+        # Remove password from response
+        user.pop("password", None)
+        
+        return {"user": user}
+        
+    except Exception as e:
+        # Log the error
+        print(f"Login error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 
 # Signup endpoint for new users
