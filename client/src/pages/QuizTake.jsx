@@ -342,7 +342,7 @@ const QuizTake = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         /* Base styles */
         .quiz-take-container {
           font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
