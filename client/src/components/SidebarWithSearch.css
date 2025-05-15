@@ -1,0 +1,34 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 100vh;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+.sidebar-title {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+.sidebar-list {
+  list-style: none;
+  padding: 0;
+}
+.sidebar-list li {
+  margin-bottom: 0.75rem;
+}
+.sidebar-list li a {
+  text-decoration: none;
+  color: #343a40;
+}
+.sidebar-list li a.active {
+  font-weight: bold;
+  color: #007bff;
+}
+
+.main-content {
+  margin-left: 220px;
+  padding: 1rem;
+}

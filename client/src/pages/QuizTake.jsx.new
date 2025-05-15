@@ -1,0 +1,181 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import Navbar1 from './navbar';
+import SidebarWithSearch from '../components/SidebarWithSearch.jsx';
+
+const QuizTake = () => {
+  const { quizId } = useParams();
+  const navigate = useNavigate();
+  const [quiz, setQuiz] = useState(null);
+  const [answers, setAnswers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState(null);
+
+  useEffect(() => {
+    const fetchQuiz = async () => {
+      console.log("Fetching quiz with ID:", quizId);
+      try {
+        const response = await axios.get(`http://127.0.0.1:8000/quizzes/${quizId}`);
+        console.log("Quiz data received:", response.data);
+        setQuiz(response.data);
+        // Initialize answers array with empty strings
+        setAnswers(new Array(response.data.questions.length).fill(''));
+        setLoading(false);
+      } catch (err) {
+        console.error("Error details:", err.response ? err.response.data : err.message);
+        setError('Failed to load quiz');
+        setLoading(false);
+        console.error('Error fetching quiz:', err);
+      }
+    };
+
+    if (quizId) {
+      fetchQuiz();
+    } else {
+      console.warn("Quiz ID is missing from parameters");
+      setError('Quiz ID is missing');
+      setLoading(false);
+    }
+  }, [quizId]);
+
+  const handleAnswerChange = (questionIndex, answer) => {
+    const newAnswers = [...answers];
+    newAnswers[questionIndex] = answer;
+    setAnswers(newAnswers);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      // Get user ID from localStorage or context
+      const userId = localStorage.getItem('userId');
+      
+      if (!userId) {
+        setError('You must be logged in to submit a quiz');
+        return;
+      }
+
+      const submission = {
+        student_id: userId,
+        quiz_id: quizId,
+        answers: answers
+      };
+
+      const response = await axios.post(`http://127.0.0.1:8000/quizzes/${quizId}/submit`, submission);
+      setScore(response.data.score);
+      setSubmitted(true);
+    } catch (err) {
+      setError('Failed to submit quiz');
+      console.error('Error submitting quiz:', err);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div>
+        <Navbar1 />
+        <div className="p-6 text-center">Loading quiz...</div>
+      </div>
+    );
+  }
+  
+  // Error state
+  if (error) {
+    return (
+      <div>
+        <Navbar1 />
+        <div className="p-6 text-center">
+          <div className="text-red-500 mb-4">{error}</div>
+          <button 
+            onClick={() => navigate('/quizzes')}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Back to Quizzes
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // No quiz found state
+  if (!quiz) {
+    return (
+      <div>
+        <Navbar1 />
+        <div className="p-6 text-center">Quiz not found</div>
+      </div>
+    );
+  }
+
+  // Main render with quiz data
+  return (
+    <div>
+      <Navbar1 />
+      <div style={{ display: 'flex', height: 'calc(100vh - 80px)' }}>
+        <SidebarWithSearch />
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <div className="container mx-auto p-6 max-w-3xl">
+            {submitted ? (
+              <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+                <h1 className="text-2xl font-bold mb-4">Quiz Completed!</h1>
+                <p className="text-xl mb-6">Your score: {score}%</p>
+                <button 
+                  onClick={() => navigate('/quizzes')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Back to Quizzes
+                </button>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold mb-6">{quiz.subject}</h1>
+                
+                <form onSubmit={handleSubmit}>
+                  {quiz.questions.map((question, qIndex) => (
+                    <div key={qIndex} className="mb-8 bg-white rounded-lg shadow-md p-6">
+                      <h3 className="text-lg font-semibold mb-4">{qIndex + 1}. {question.question}</h3>
+                      
+                      <div className="space-y-3">
+                        {question.options.map((option, oIndex) => (
+                          <div key={oIndex} className="flex items-center">
+                            <input
+                              type="radio"
+                              id={`q${qIndex}-o${oIndex}`}
+                              name={`question-${qIndex}`}
+                              value={option}
+                              checked={answers[qIndex] === option}
+                              onChange={() => handleAnswerChange(qIndex, option)}
+                              className="mr-2"
+                              required
+                            />
+                            <label htmlFor={`q${qIndex}-o${oIndex}`}>{option}</label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="mt-8 text-center">
+                    <button 
+                      type="submit"
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg"
+                    >
+                      Submit Quiz
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default QuizTake;

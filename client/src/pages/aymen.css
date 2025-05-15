@@ -1,0 +1,313 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans,
+    Helvetica Neue, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header Styles */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0;
+}
+
+.nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav a {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+.nav a:hover {
+  color: #2563eb;
+}
+
+.nav a.active {
+  color: #2563eb;
+}
+
+.nav a.active::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #2563eb;
+}
+
+.loginBtn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.loginBtn:hover {
+  background-color: #1d4ed8;
+}
+
+/* Footer Styles */
+.footer {
+  background-color: #1e3a8a;
+  color: white;
+  padding: 3rem 2rem 1rem;
+  margin-top: auto;
+}
+
+.footerContent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footerLogo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.footerLogo h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3rem;
+}
+
+.footerLinkGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footerLinkGroup h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.footerLinkGroup a {
+  color: #e5e7eb;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.3s ease;
+}
+
+.footerLinkGroup a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.footerBottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 2rem;
+  padding-top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #e5e7eb;
+}
+
+/* Hero Section */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.heroContent {
+  max-width: 600px;
+  z-index: 1;
+}
+
+.heroContent h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.heroContent p {
+  font-size: 1.125rem;
+  color: #4b5563;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.heroBtns {
+  display: flex;
+  gap: 1rem;
+}
+
+.primaryBtn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.primaryBtn:hover {
+  background-color: #1d4ed8;
+}
+
+.secondaryBtn {
+  background-color: transparent;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondaryBtn:hover {
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.heroImage {
+  position: relative;
+  width: 400px;
+  height: 400px;
+}
+
+/* Books and Pens Styling */
+.books {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  transform: rotate(-10deg);
+}
+
+.book1,
+.book2,
+.book3 {
+  height: 200px;
+  border-radius: 2px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.book1 {
+  width: 40px;
+  background-color: #ef4444;
+  transform: rotate(5deg);
+  z-index: 3;
+}
+
+.book2 {
+  width: 40px;
+  background-color: #3b82f6;
+  transform: rotate(-2deg);
+  margin-left: -20px;
+  z-index: 2;
+}
+
+.book3 {
+  width: 40px;
+  background-color: #10b981;
+  transform: rotate(-8deg);
+  margin-left: -20px;
+  z-index: 1;
+}
+
+.pens {
+  position: absolute;
+  top: 50px;
+  right: 100px;
+  display: flex;
+  gap: 15px;
+}
+
+.pen1,
+.pen2 {
+  width: 8px;
+  height: 150px;
+  background: linear-gradient(to bottom, #fbbf24 0%, #fbbf24 10%, #1e3a8a 10%, #1e3a8a 90%, #d1d5db 90%, #d1d5db 100%);
+  border-radius: 4px;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pen2 {
+  background: linear-gradient(to bottom, #ec4899 0%, #ec4899 10%, #1e3a8a 10%, #1e3a8a 90%, #d1d5db 90%, #d1d5db 100%);
+  transform: rotate(30deg);
+}
+
+/* Feature

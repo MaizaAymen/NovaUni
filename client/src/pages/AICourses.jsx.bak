@@ -1,0 +1,1043 @@
+import React, { useEffect, useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import SidebarWithSearch from '../components/SidebarWithSearch.jsx';
+import Navbar1 from './navbar.jsx';
+
+// Main component that combines course listing and book viewer
+export default function StudyCourses() {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showCourseBook, setShowCourseBook] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const userCategory = localStorage.getItem("speciality");
+  const isAdmin = localStorage.getItem("admin") === "true";
+
+  // Function to create a sample course directly
+  const createSampleCourse = async () => {
+    setLoading(true);
+    try {
+      const sampleCourse = {
+        name: "Introduction to Programming",
+        description: "## Welcome to Programming\n\nThis course introduces the basics of programming.\n\n## Variables and Data Types\n\nLearn about different types of variables.\n\n## Control Structures\n\nUnderstand how to use if statements and loops.\n\n## Functions\n\nLearn how to create reusable code with functions.\n\n## Objects and Classes\n\nAn introduction to object-oriented programming concepts.",
+        category: userCategory || "informatique",
+        ai_generated: false
+      };
+      
+      const response = await fetch('http://127.0.0.1:8000/courses/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sampleCourse),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create sample course: ${response.status}`);
+      }
+      
+      // Refresh courses list
+      fetchCourses();
+      alert("Sample course created successfully!");
+    } catch (err) {
+      console.error("Error creating sample course:", err);
+      setError(`Failed to create sample course: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, [userCategory]);const fetchCourses = () => {
+    setLoading(true);
+    console.log("Fetching courses...");
+    
+    fetch('http://127.0.0.1:8000/courses/')
+      .then(res => {
+        console.log("Response status:", res.status);
+        if (!res.ok) throw new Error(`Failed to fetch courses: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        console.log("Received courses data:", data);
+        
+        if (!Array.isArray(data)) {
+          console.error("Received non-array data:", data);
+          setError("Invalid data format received from server");
+          setCourses([]);
+          return;
+        }
+        
+        if (data.length === 0) {
+          console.log("No courses received from server");
+          setCourses([]);
+          return;
+        }
+        
+        // Direct use of data without filtering
+        setCourses(data);
+        console.log("Courses set in state:", data.length);
+        setError(null);
+      })
+      .catch(err => {
+        console.error("Error fetching courses:", err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const handleSelectCourse = (course) => {
+    setSelectedCourse(course);
+    setShowCourseBook(true);
+    setEditMode(false);
+  };
+
+  const handleBackToList = () => {
+    setShowCourseBook(false);
+    setEditMode(false);
+    fetchCourses(); // Refresh courses when going back to the list
+  };  const handleDeleteCourse = async (courseId) => {
+    // Enhanced validation: check for missing-id placeholder and other invalid values
+    if (!courseId || typeof courseId !== 'string' || courseId.trim() === '' || courseId === 'missing-id') {
+      console.error("Cannot delete course: Invalid course ID", courseId);
+      alert("Cannot delete this course: missing or invalid course ID");
+      return;
+    }
+    
+    if (window.confirm("Are you sure you want to delete this course?")) {
+      try {
+        console.log(`Deleting course with ID: ${courseId}`);
+        // Ensure the ID is properly formatted for the request
+        const sanitizedId = courseId.trim();
+        
+        const response = await fetch(`http://127.0.0.1:8000/courses/${sanitizedId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.detail || `Failed to delete course (Status: ${response.status})`);
+        }
+        
+        // Remove the course from state and go back to list
+        setCourses(courses.filter(c => c._id !== courseId));
+        if (selectedCourse && selectedCourse._id === courseId) {
+          setShowCourseBook(false);
+        }
+        
+        // Show success message
+        alert("Course deleted successfully");
+      } catch (err) {
+        console.error("Delete course error:", err);
+        alert(`Error deleting course: ${err.message}`);
+      }
+    }
+  };
+  const handleEditCourse = (course) => {
+    if (!course || !course._id) {
+      console.error("Cannot edit course: Invalid course object or missing ID", course);
+      alert("Cannot edit this course: missing course ID");
+      return;
+    }
+    setSelectedCourse(course);
+    setShowCourseBook(true);
+    setEditMode(true);
+  };
+  if (loading) return (
+    <div style={{ display: 'flex', height: '100vh' }}>
+      <SidebarWithSearch />
+      <div className="main-content" style={{ flex: 1, padding: '1rem' }}>
+        <div style={styles.loadingContainer}>
+          <p>Loading Courses...</p>
+        </div>
+      </div>
+    </div>
+  );
+  
+  if (error) return (
+    <div style={{ display: 'flex', height: '100vh' }}>
+      <SidebarWithSearch />
+      <div className="main-content" style={{ flex: 1, padding: '1rem' }}>
+        <div style={styles.errorContainer}>
+          <h2>Error Loading Courses</h2>
+          <p>{error}</p>
+          <button onClick={fetchCourses} style={styles.generateButton}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  );  if (courses.length === 0) {
+    return (
+      <div style={{ display: 'flex', height: '100vh' }}>
+        <SidebarWithSearch />
+        <div className="main-content" style={{ flex: 1, padding: '1rem' }}>
+          <div style={styles.emptyCourses}>
+            <h2>{isAdmin ? 'All Study Courses' : `Study Courses - ${userCategory}`}</h2>
+            <p>No courses found. Let's create your first course!</p>
+            
+            {isAdmin && (
+              <div style={styles.actionButtonsContainer}>
+                <button 
+                  onClick={() => window.location.href = '/newcourse'} 
+                  style={styles.generateButton}
+                >
+                  Generate AI Course
+                </button>
+                <button 
+                  onClick={() => {
+                    // Create a sample course directly
+                    createSampleCourse();
+                  }}
+                  style={{...styles.generateButton, backgroundColor: '#3b82f6'}}
+                >
+                  Create Sample Course
+                </button>
+              </div>
+            )}
+            
+            {!isAdmin && (
+              <button 
+                onClick={() => window.location.href = '/newcourse'} 
+                style={styles.generateButton}
+              >
+                Generate a course now
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+    <Navbar1 />
+    <div style={{ display: 'flex', height: '100vh' }}>
+      <SidebarWithSearch />
+      <div className="main-content" style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+        <div style={styles.container}>
+          {!showCourseBook ? (
+            <CourseList 
+              courses={courses} 
+              onSelectCourse={handleSelectCourse} 
+              onGenerateNew={() => window.location.href = '/newcourse'} 
+              userCategory={userCategory}
+              isAdmin={isAdmin}
+              onDeleteCourse={handleDeleteCourse}
+              onEditCourse={handleEditCourse}
+            />
+          ) : (
+            <CourseBookView 
+              course={selectedCourse} 
+              onBack={handleBackToList} 
+              editMode={editMode}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+    </>
+  );
+}
+
+// Course listing component
+function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAdmin, onDeleteCourse, onEditCourse }) {
+  return (
+    <>
+    
+    <div style={styles.courseListContainer}>
+      <div style={styles.header}>
+        <h1 style={styles.mainTitle}>{isAdmin ? 'All Study Courses' : `Study Courses - ${userCategory}`}</h1>
+        <button onClick={onGenerateNew} style={styles.generateButton}>
+          Generate New Course
+        </button>
+      </div>
+
+      {courses.length === 0 ? (
+        <div style={styles.emptyCourses}>
+          <h2>No courses found</h2>
+          <p>Start by generating your first course</p>
+          <button onClick={onGenerateNew} style={styles.generateButton}>
+            Generate Course
+          </button>
+        </div>      ) : (
+        <div style={styles.courseGrid}>
+          {courses.filter(course => course && typeof course === 'object').map(course => {
+            // Ensure the course has required properties
+            if (!course._id) {
+              console.warn("Course without ID detected:", course);
+              return null; // Skip rendering this course
+            }
+            
+            return (
+              <div key={course._id} style={styles.courseCard}>
+                <div style={styles.courseCardInner}>
+                  <h3 style={styles.courseTitle}>{course.name || "Untitled Course"}</h3>
+                  <div style={styles.coursePreview}>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]} 
+                      children={(course.description ? course.description.substring(0, 50) + '...' : "No description available")} 
+                    />
+                  </div>
+                  <button style={styles.studyButton} onClick={() => onSelectCourse(course)}>Study This Course</button>
+                  {isAdmin && (
+                    <div style={styles.adminControls}>
+                      {course.ai_generated && (
+                        <button style={styles.editButton} onClick={() => onEditCourse(course)}>Edit</button>
+                      )}
+                      <button 
+                        style={styles.deleteButton} 
+                        onClick={() => {
+                          if (course._id && course._id !== 'missing-id') {
+                            onDeleteCourse(course._id);
+                          } else {
+                            alert("Cannot delete this course: Course ID is missing or invalid");
+                            console.error("Delete attempted with invalid course:", course);
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </div>
+      )}
+    </div>
+    </>
+  );
+}
+
+// Book view component for studying a course
+function CourseBookView({ course, onBack, editMode }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pages, setPages] = useState([]);
+  const [showTOC, setShowTOC] = useState(false);
+  const [editedCourse, setEditedCourse] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const bookRef = useRef(null);
+  useEffect(() => {
+    if (course) {
+      // Ensure all necessary properties are included with defaults as needed
+      setEditedCourse({
+        _id: course._id,
+        name: course.name || '',
+        description: course.description || '',
+        category: course.category || 'informatique', 
+        ai_generated: course.ai_generated || true
+      });
+    }
+  }, [course]);
+
+  // Split content into pages with 5 titles per page
+  useEffect(() => {
+    if (course?.description) {
+      // Split the content by h2 headers
+      const content = course.description;
+      const sections = content.split(/(?=## )/);
+      
+      // Group sections into pages (5 sections per page)
+      const groupedPages = [];
+      for (let i = 0; i < sections.length; i += 5) {
+        const pageContent = sections.slice(i, i + 5).join('\n\n');
+        groupedPages.push(pageContent.trim());
+      }
+      
+      setPages(groupedPages);
+      setCurrentPage(0);
+    }
+  }, [course]);
+
+  const goToNextPage = () => {
+    if (currentPage < pages.length - 1) {
+      setCurrentPage(currentPage + 1);
+      animatePageTurn("forward");
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+      animatePageTurn("backward");
+    }
+  };
+
+  const animatePageTurn = (direction) => {
+    if (bookRef.current) {
+      const animationClass = direction === "forward" ? "flipping" : "flipping-back";
+      bookRef.current.classList.add(animationClass);
+      setTimeout(() => {
+        bookRef.current.classList.remove(animationClass);
+      }, 500);
+    }
+  };
+
+  const toggleTOC = () => {
+    setShowTOC(!showTOC);
+  };
+  const handleSaveChanges = async () => {
+    if (!editedCourse) return;
+    
+    // Check if course ID is defined
+    if (!editedCourse._id) {
+      setSaveError("Course ID is undefined. Cannot save changes.");
+      return;
+    }
+    
+    setSaving(true);
+    setSaveError(null);
+    
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/courses/ai/${editedCourse._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editedCourse.name,
+          description: editedCourse.description,
+          category: editedCourse.category
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update course');
+      }
+      
+      // Update the course with the response data
+      const updatedCourse = await response.json();
+      setEditedCourse(updatedCourse);
+      
+      // Go back to view mode
+      onBack();
+    } catch (err) {
+      setSaveError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={styles.bookViewContainer}>
+      <style>
+        {`
+          .flipping {
+            animation: flipPage 0.5s ease-in-out;
+          }
+          
+          .flipping-back {
+            animation: flipPageBack 0.5s ease-in-out;
+          }
+          
+          @keyframes flipPage {
+            0% { transform: rotateY(0); }
+            50% { transform: rotateY(10deg); }
+            100% { transform: rotateY(0); }
+          }
+          
+          @keyframes flipPageBack {
+            0% { transform: rotateY(0); }
+            50% { transform: rotateY(-10deg); }
+            100% { transform: rotateY(0); }
+          }
+        `}
+      </style>
+
+      <div style={styles.bookHeader}>
+        <button onClick={onBack} style={styles.backButton}>
+          ← Back to Courses
+        </button>
+        {editMode && editedCourse ? (
+          <input 
+            type="text" 
+            value={editedCourse.name || ''}
+            onChange={(e) => setEditedCourse({...editedCourse, name: e.target.value})}
+            style={styles.titleInput}
+          />
+        ) : (
+          <h2 style={styles.bookTitle}>{course.name}</h2>
+        )}
+        {!editMode && (
+          <button onClick={toggleTOC} style={styles.tocButton}>
+            {showTOC ? "Hide Contents" : "Table of Contents"}
+          </button>
+        )}
+        {editMode && (
+          <div style={styles.editControls}>
+            <select 
+              value={editedCourse?.category || ''}
+              onChange={(e) => setEditedCourse({...editedCourse, category: e.target.value})}
+              style={styles.categorySelect}
+            >
+              <option value="informatique">Informatique</option>
+              <option value="gestion">Gestion</option>
+              <option value="prepa">Prepa</option>
+              <option value="english">English</option>
+            </select>
+            <button 
+              onClick={handleSaveChanges} 
+              disabled={saving}
+              style={styles.saveButton}
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {saveError && (
+        <div style={styles.errorMessage}>Error: {saveError}</div>
+      )}
+
+      {showTOC && !editMode && (
+        <TableOfContents courseContent={course.description} onSelectSection={(index) => {
+          setCurrentPage(index);
+          setShowTOC(false);
+          animatePageTurn("forward");
+        }} />
+      )}
+
+      {!editMode ? (
+        <div style={styles.bookContainer} ref={bookRef}>
+          <div style={styles.pageControls}>
+            <button
+              onClick={goToPrevPage}
+              disabled={currentPage === 0}
+              style={{...styles.pageButton, ...(currentPage === 0 ? styles.disabledButton : {})}}
+            >
+              ←
+            </button>
+            <span style={styles.pageNumber}>
+              Page {currentPage + 1} of {pages.length}
+            </span>
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage === pages.length - 1}
+              style={{...styles.pageButton, ...(currentPage === pages.length - 1 ? styles.disabledButton : {})}}
+            >
+              →
+            </button>
+          </div>
+
+          <div style={styles.bookPage}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              children={pages[currentPage] || ""}
+              components={{
+                h2: ({ node, ...props }) => <h2 style={styles.sectionTitle} {...props} />,
+                p: ({ node, ...props }) => <p style={styles.paragraph} {...props} />,
+                ul: ({ node, ...props }) => <ul style={styles.list} {...props} />,
+                ol: ({ node, ...props }) => <ol style={styles.list} {...props} />,
+                li: ({ node, ...props }) => <li style={styles.listItem} {...props} />,
+                blockquote: ({ node, ...props }) => <blockquote style={styles.blockquote} {...props} />,
+                code: ({ node, ...props }) => <code style={styles.code} {...props} />,
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div style={styles.editorContainer}>
+          <textarea
+            value={editedCourse?.description || ''}
+            onChange={(e) => setEditedCourse({...editedCourse, description: e.target.value})}
+            style={styles.descriptionEditor}
+            placeholder="Course content in Markdown format..."
+          />
+          <div style={styles.previewContainer}>
+            <h3 style={styles.previewTitle}>Preview:</h3>
+            <div style={styles.previewContent}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                children={editedCourse?.description || ''}
+                components={{
+                  h2: ({ node, ...props }) => <h2 style={styles.sectionTitle} {...props} />,
+                  p: ({ node, ...props }) => <p style={styles.paragraph} {...props} />,
+                  ul: ({ node, ...props }) => <ul style={styles.list} {...props} />,
+                  ol: ({ node, ...props }) => <ol style={styles.list} {...props} />,
+                  li: ({ node, ...props }) => <li style={styles.listItem} {...props} />,
+                  blockquote: ({ node, ...props }) => <blockquote style={styles.blockquote} {...props} />,
+                  code: ({ node, ...props }) => <code style={styles.code} {...props} />,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!editMode && (
+        <div style={styles.bookNavigation}>
+          <button 
+            onClick={goToPrevPage} 
+            disabled={currentPage === 0} 
+            style={{...styles.navButton, ...(currentPage === 0 ? styles.disabledButton : {})}}
+          >
+            Previous Page
+          </button>
+          <button 
+            onClick={goToNextPage} 
+            disabled={currentPage === pages.length - 1} 
+            style={{...styles.navButton, ...(currentPage === pages.length - 1 ? styles.disabledButton : {})}}
+          >
+            Next Page
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Table of Contents Component
+function TableOfContents({ courseContent, onSelectSection }) {
+  const [sections, setSections] = useState([]);
+
+  useEffect(() => {
+    if (courseContent) {
+      // Extract all h2 headers from the content
+      const regex = /## (.*?)(?=\n|$)/g;
+      const matches = [...courseContent.matchAll(regex)];
+
+      const extractedSections = matches.map((match, index) => ({
+        title: match[1].trim(),
+        index: Math.floor(index / 5), // Calculate which page this section will be on (5 sections per page)
+        position: index % 5 // Position within the page
+      }));
+
+      setSections(extractedSections);
+    }
+  }, [courseContent]);
+
+  return (
+    <div style={styles.tableOfContents}>
+      <h3 style={styles.tocHeading}>Table of Contents</h3>
+      <ul style={styles.tocList}>
+        {sections.map((section, index) => (
+          <li key={index} style={styles.tocItem}>
+            <button 
+              onClick={() => onSelectSection(section.index)} 
+              style={styles.tocButton}
+            >
+              {section.title}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Styles
+const styles = {
+  container: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "2rem",
+    fontFamily: "'Nunito', 'Segoe UI', sans-serif",
+    backgroundColor: "#f8fafc",
+    minHeight: "100vh",
+  },
+  loadingContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    fontSize: "1.2rem",
+    color: "#4b5563",
+  },
+  errorContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    fontSize: "1.2rem",
+    color: "#ef4444",
+  },
+  
+  // Course List Styles
+  courseListContainer: {
+    width: "100%",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "2rem",
+    borderBottom: "1px solid #e5e7eb",
+    paddingBottom: "1rem",
+  },
+  mainTitle: {
+    fontSize: "2.5rem",
+  
+    margin: 0,
+    fontWeight: 700,
+  },
+  generateButton: {
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: "0.5rem",
+    padding: "0.75rem 1.5rem",
+    fontSize: "1rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  emptyCourses: {
+    textAlign: "center",
+    padding: "4rem 2rem",
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+  },
+  actionButtonsContainer: {
+    display: "flex",
+    gap: "1rem",
+    justifyContent: "center",
+    marginTop: "1.5rem",
+  },
+  courseGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+    gap: "2rem",
+  },
+  courseCard: {
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    overflow: "hidden",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    transition: "transform 0.2s, box-shadow 0.2s",
+    cursor: "pointer",
+  },
+  courseCardInner: {
+    padding: "1.5rem",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
+  courseTitle: {
+    fontSize: "1.5rem",
+    color: "#1e40af",
+    marginTop: 0,
+    marginBottom: "1rem",
+  },
+  coursePreview: {
+    flex: 1,
+    overflow: "hidden",
+    marginBottom: "1.5rem",
+    color: "#4b5563",
+    fontSize: "0.95rem",
+  },
+  studyButton: {
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: "0.5rem",
+    padding: "0.75rem 1rem",
+    fontSize: "1rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+    width: "100%",
+  },
+  adminControls: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "1rem",
+  },
+  editButton: {
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "0.5rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  deleteButton: {
+    backgroundColor: "#ef4444",
+    color: "white",
+    border: "none",
+    borderRadius: "0.5rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  
+  // Book View Styles
+  bookViewContainer: {
+    width: "100%",
+  },
+  bookHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "1.5rem",
+    borderBottom: "1px solid #e5e7eb",
+    paddingBottom: "1rem",
+  },
+  backButton: {
+    backgroundColor: "transparent",
+    color: "#3b82f6",
+    border: "1px solid #3b82f6",
+    borderRadius: "0.5rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  bookTitle: {
+    fontSize: "1.8rem",
+    color: "#1e40af",
+    margin: 0,
+    fontWeight: 700,
+    textAlign: "center",
+    flex: 1,
+  },
+  tocButton: {
+    backgroundColor: "transparent",
+    color: "#3b82f6",
+    border: "1px solid #3b82f6",
+    borderRadius: "0.5rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  tableOfContents: {
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    padding: "1.5rem",
+    marginBottom: "1.5rem",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+  },
+  tocHeading: {
+    fontSize: "1.5rem",
+    color: "#1e40af",
+    marginTop: 0,
+    marginBottom: "1rem",
+    borderBottom: "1px solid #e5e7eb",
+    paddingBottom: "0.5rem",
+  },
+  tocList: {
+    listStyleType: "none",
+    padding: 0,
+    margin: 0,
+    maxHeight: "300px",
+    overflowY: "auto",
+  },
+  tocItem: {
+    marginBottom: "0.5rem",
+  },
+  tocItemButton: {
+    background: "none",
+    border: "none",
+    color: "#3b82f6",
+    cursor: "pointer",
+    fontSize: "1rem",
+    textAlign: "left",
+    padding: "0.5rem 0",
+    width: "100%",
+    transition: "color 0.2s",
+  },
+  bookContainer: {
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    overflow: "hidden",
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    transition: "transform 0.5s",
+    transformStyle: "preserve-3d",
+    perspective: "1500px",
+  },
+  pageControls: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "1rem",
+    backgroundColor: "#1e40af",
+    color: "white",
+  },
+  pageButton: {
+    backgroundColor: "transparent",
+    border: "1px solid rgba(255, 255, 255, 0.5)",
+    color: "white",
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    fontSize: "1.2rem",
+    transition: "all 0.2s",
+  },
+  pageNumber: {
+    fontSize: "0.9rem",
+  },
+  bookPage: {
+    backgroundColor: "#fffef0",
+    padding: "3rem",
+    minHeight: "600px",
+    maxHeight: "800px",
+    position: "relative",
+    overflowY: "auto",
+    lineHeight: 1.6,
+    fontSize: "1.1rem",
+    color: "#333",
+    backgroundImage: "linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)",
+    backgroundSize: "20px 20px",
+    boxShadow: "inset 0 0 30px rgba(0, 0, 0, 0.05)",
+  },
+  sectionTitle: {
+    fontSize: "1.8rem",
+    color: "#1e40af",
+    marginTop: "1.5rem",
+    marginBottom: "1.5rem",
+    fontFamily: "'Merriweather', 'Georgia', serif",
+    borderBottom: "2px solid #e5e7eb",
+    paddingBottom: "0.5rem",
+  },
+  paragraph: {
+    marginBottom: "1.2rem",
+    textAlign: "justify",
+    textIndent: "2rem",
+  },
+  list: {
+    marginBottom: "1.2rem",
+    paddingLeft: "2rem",
+  },
+  listItem: {
+    marginBottom: "0.5rem",
+  },
+  blockquote: {
+    borderLeft: "4px solid #3b82f6",
+    paddingLeft: "1rem",
+    fontStyle: "italic",
+    color: "#4b5563",
+    margin: "1.5rem 0",
+    backgroundColor: "rgba(219, 234, 254, 0.3)",
+    padding: "1rem",
+  },
+  code: {
+    backgroundColor: "#f1f5f9",
+    padding: "0.2rem 0.4rem",
+    borderRadius: "3px",
+    fontFamily: "'Courier New', monospace",
+    fontSize: "0.9rem",
+  },
+  bookNavigation: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "1.5rem",
+  },
+  navButton: {
+    backgroundColor: "#1e40af",
+    color: "white",
+    border: "none",
+    borderRadius: "0.5rem",
+    padding: "0.75rem 1.5rem",
+    fontSize: "1rem",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  disabledButton: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+
+  // Editor specific styles
+  titleInput: {
+    fontSize: "1.5rem",
+    color: "#1e40af",
+    padding: "0.5rem",
+    border: "1px solid #d1d5db",
+    borderRadius: "0.25rem",
+    flex: 1,
+    margin: "0 1rem",
+    fontFamily: "inherit",
+  },
+  categorySelect: {
+    padding: "0.5rem",
+    border: "1px solid #d1d5db",
+    borderRadius: "0.25rem",
+    marginRight: "1rem",
+    fontSize: "0.9rem",
+  },
+  saveButton: {
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: "0.5rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.9rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  editControls: {
+    display: "flex",
+    alignItems: "center",
+  },
+  editorContainer: {
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    overflow: "hidden",
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    minHeight: "600px",
+  },
+  descriptionEditor: {
+    padding: "1rem",
+    minHeight: "300px",
+    resize: "vertical",
+    border: "none",
+    borderBottom: "1px solid #e5e7eb",
+    fontSize: "1rem",
+    fontFamily: "'Courier New', monospace",
+    lineHeight: "1.6",
+  },
+  previewContainer: {
+    padding: "1rem",
+    flex: 1,
+    backgroundColor: "#fffef0",
+    maxHeight: "400px",
+    overflowY: "auto",
+  },
+  previewTitle: {
+    fontSize: "1.2rem",
+    color: "#4b5563",
+    marginTop: 0,
+    marginBottom: "1rem",
+    borderBottom: "1px solid #e5e7eb",
+    paddingBottom: "0.5rem",
+  },
+  previewContent: {
+    lineHeight: "1.6",
+    fontSize: "1rem",
+  },
+  errorMessage: {
+    backgroundColor: "#fee2e2",
+    color: "#b91c1c",
+    padding: "0.75rem 1rem",
+    borderRadius: "0.5rem",
+    marginBottom: "1rem",
+  }
+};

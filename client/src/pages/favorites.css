@@ -1,0 +1,164 @@
+/* Styles pour la page des favoris */
+.favorites-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.favorites-page h1 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #333;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 0.5rem;
+}
+
+.empty-favorites {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.empty-favorites p {
+  margin-bottom: 1.5rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.empty-favorites .btn {
+  padding: 0.7rem 1.5rem;
+  background-color: #4a6cf7;
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.empty-favorites .btn:hover {
+  background-color: #3a5bd9;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.favorite-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+  background-color: white;
+  position: relative;
+}
+
+.favorite-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.course-thumbnail {
+  height: 160px;
+  background-color: #f0f0f0;
+  background-size: cover;
+  background-position: center;
+}
+
+.course-info {
+  padding: 1rem;
+}
+
+.course-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.course-info p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.course-metadata {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.course-metadata span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.favorite-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+}
+
+.view-course-btn {
+  padding: 0.5rem 1rem;
+  background-color: #4a6cf7;
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.view-course-btn:hover {
+  background-color: #3a5bd9;
+}
+
+.loading, .error {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.loading {
+  color: #666;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+/* Styles pour les animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.favorite-button.favorite-active span {
+  animation: pulse 0.3s;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .favorites-page {
+    padding: 1rem;
+  }
+  
+  .favorites-grid {
+    grid-template-columns: 1fr;
+  }
+}

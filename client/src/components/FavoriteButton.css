@@ -1,0 +1,159 @@
+/* Styles pour le bouton favori */
+.favorite-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: transform 0.2s, background-color 0.2s;
+  outline: none;
+}
+
+.favorite-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(1.1);
+}
+
+.favorite-button:active {
+  transform: scale(0.95);
+}
+
+.favorite-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.favorite-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tailles du bouton */
+.favorite-button--small .favorite-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.favorite-button--medium .favorite-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.favorite-button--large .favorite-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Icônes du cœur (vide et rempli) */
+.icon-heart-empty,
+.icon-heart-filled {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s, transform 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-heart-empty::before {
+  content: "🤍";
+}
+
+.icon-heart-filled::before {
+  content: "❤️";
+}
+
+/* État par défaut (cœur vide visible, cœur plein caché) */
+.favorite-button .icon-heart-empty {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.favorite-button .icon-heart-filled {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+/* État favori (cœur vide caché, cœur plein visible) */
+.favorite-button.is-favorite .icon-heart-empty {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.favorite-button.is-favorite .icon-heart-filled {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Animation lors de la transition */
+.favorite-button.is-animating .icon-heart-empty,
+.favorite-button.is-animating .icon-heart-filled {
+  transition: opacity 0.3s, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Indicateur de chargement */
+.loading-indicator {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #4a6cf7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Animation pour le cœur rempli */
+.favorite-button.is-favorite.is-animating .icon-heart-filled {
+  animation: pulse 0.4s;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Styles pour le toast de notification */
+.favorite-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(51, 51, 51, 0.9);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 4px;
+  z-index: 1000;
+  font-size: 14px;
+  max-width: 300px;
+  text-align: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  animation: fadeInUp 0.3s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
