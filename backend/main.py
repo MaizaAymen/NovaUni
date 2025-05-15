@@ -2,49 +2,24 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from models.schemas import EtudiantSchema, QuizModel, QuestionModel, SubmissionModel
-from database.database import etudiants_collection, quizzes_collection, submissions_collection, connect_and_init_db
+from database.database import etudiants_collection, quizzes_collection, submissions_collection  # Ensure you have MongoDB connection here
 from bson import ObjectId
 from models.course import CourseSchema
 from database.database import courses_collection, recommended_books_collection
 from pydantic import BaseModel
 import os
-import logging
 from dotenv import load_dotenv
 import httpx
 import openai
 from bs4 import BeautifulSoup
 import json
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
-
-# Load environment variables
 load_dotenv()  # Load environment variables from .env
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Create FastAPI app
-app = FastAPI(
-    title="NovaUni API",
-    description="Backend API for NovaUni educational platform",
-    version="1.0.0",
-)
-
-# Register startup event to initialize database
-@app.on_event("startup")
-async def startup_db_client():
-    logger.info("Initializing database connection on startup")
-    success = await connect_and_init_db()
-    if success:
-        logger.info("Database initialization complete")
-    else:
-        logger.warning("Database initialization had issues, but app will continue to run")
-        # The app will continue running with possibly limited functionality
-        # You might want to display warnings in the UI for admin users
+app = FastAPI()
 
 # CORS middleware setup
 origins = [
@@ -185,37 +160,23 @@ class LoginModel(BaseModel):
 
 @app.post("/login")
 async def login(login: LoginModel):
-    try:
-        logger.info(f"Login attempt for email: {login.email}")
-        # Fetch user by email
-        # Since we may have duplicate emails, get the first one that matches
-        # (This is a temporary fix until you clean up duplicate accounts)
-        users = await etudiants_collection.find({"email": login.email}).to_list(length=2)
-        
-        if not users:
-            logger.warning(f"User not found with email: {login.email}")
-            raise HTTPException(status_code=401, detail="Invalid email")
-        
-        # Use the first user found (if there are duplicates)
-        user = users[0]
-        
-        # Check password (in a real app, you'd verify hashed passwords)
-        if user and login.password:
-            logger.info(f"User found, returning user data")
-            # Convert ObjectId to string
-            user["_id"] = str(user["_id"])
-            # Make sure admin is a boolean
-            if "admin" not in user:
-                user["admin"] = False
-            # Remove password from response
-            user.pop("password", None)
-            return {"user": user}
-        else:
-            logger.warning(f"Password verification failed")
-            raise HTTPException(status_code=401, detail="Invalid password")
-    except Exception as e:
-        logger.error(f"Login error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
+    # Fetch user by email
+    user = await etudiants_collection.find_one({"email": login.email})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    # Check if password matches
+    if user.get("password") != login.password:
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Convert ObjectId to string
+    user["_id"] = str(user["_id"])
+    # Make sure admin is a boolean
+    if "admin" not in user:
+        user["admin"] = False
+    # Remove password from response
+    user.pop("password", None)
+    return {"user": user}
 
 
 # Signup endpoint for new users
@@ -269,124 +230,48 @@ async def update_profile(user_id: str, update_data: dict = Body(...)):
     raise HTTPException(status_code=404, detail="User not found or no changes made")
 
 
-# Sample root route for message and diagnostics
+# Sample root route for message
 @app.get("/")
 async def root():
-    try:
-        # Check database connectivity
-        db_status = "Connected"
-        book_count = await recommended_books_collection.count_documents({})
-        student_count = await etudiants_collection.count_documents({})
-        quiz_count = await quizzes_collection.count_documents({})
-        course_count = await courses_collection.count_documents({})
-        
-        return {
-            "message": "Hello World",
-            "status": "API Running",
-            "database": db_status,
-            "collections": {
-                "books": book_count,
-                "students": student_count,
-                "quizzes": quiz_count,
-                "courses": course_count
-            }
-        }
-    except Exception as e:
-        return {
-            "message": "Hello World",
-            "status": "API Running",
-            "database_error": str(e)
-        }
+    return {"message": "Hello World"}
 
 
 # Route to scrape books from books.toscrape.com and store in MongoDB
 @app.get("/scrape-books")
 async def scrape_books():
-    try:
-        print("Starting book scraping process...")
-        async with httpx.AsyncClient() as client:
-            base_url = "https://books.toscrape.com"
-            page = 1
-            scraped = []
-            while True:
-                url = f"{base_url}/catalogue/page-{page}.html"
-                print(f"Scraping page {page}: {url}")
-                
-                try:
-                    resp = await client.get(url, timeout=30.0)  # Add a timeout
-                    if resp.status_code != 200:
-                        print(f"Received non-200 status code: {resp.status_code}")
-                        break
-                except Exception as e:
-                    print(f"Error fetching page {page}: {str(e)}")
-                    break
-                
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                items = soup.select('article.product_pod')
-                
-                if not items:
-                    print(f"No items found on page {page}, stopping")
-                    break
-                
-                print(f"Found {len(items)} books on page {page}")
-                
-                for item in items:
-                    try:
-                        title = item.h3.a['title']
-                        price = float(item.select_one('.price_color').text.lstrip('£'))
-                        availability = item.select_one('.availability').text.strip()
-                        detail_href = item.h3.a['href'].replace('../../', '')
-                        detail_url = f"{base_url}/catalogue/{detail_href}"
-                        
-                        print(f"Getting details for book: {title}")
-                        
-                        detail_resp = await client.get(detail_url, timeout=30.0)
-                        detail_soup = BeautifulSoup(detail_resp.text, 'html.parser')
-                        category = detail_soup.select('ul.breadcrumb li a')[-1].text.strip()
-                        
-                        scraped.append({
-                            'title': title,
-                            'price': price,
-                            'category': category,
-                            'availability': availability
-                        })
-                        print(f"Added book: {title}, category: {category}")
-                    except Exception as e:
-                        print(f"Error processing book: {str(e)}")
-                
-                page += 1
-                # Limit to 5 pages for performance during testing
-                if page > 5:
-                    print("Reached 5 pages limit, stopping")
-                    break
-            
-            print(f"Total books scraped: {len(scraped)}")
-            
-            if scraped:
-                # Clear existing books and insert new ones
-                print("Clearing existing books collection")
-                await recommended_books_collection.delete_many({})
-                
-                print("Inserting new books into database")
-                insert_result = await recommended_books_collection.insert_many(scraped)
-                print(f"Inserted {len(insert_result.inserted_ids)} books")
-                
-                # Count books by category
-                categories = {}
-                for book in scraped:
-                    cat = book['category']
-                    if cat in categories:
-                        categories[cat] += 1
-                    else:
-                        categories[cat] = 1
-                print(f"Books by category: {categories}")
-                
-                return {"scraped_count": len(scraped), "categories": categories}
-            else:
-                return {"scraped_count": 0, "error": "No books were scraped"}
-    except Exception as e:
-        print(f"Error in scrape_books: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error scraping books: {str(e)}")
+    async with httpx.AsyncClient() as client:
+        base_url = "https://books.toscrape.com"
+        page = 1
+        scraped = []
+        while True:
+            url = f"{base_url}/catalogue/page-{page}.html"
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                break
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            items = soup.select('article.product_pod')
+            if not items:
+                break
+            for item in items:
+                title = item.h3.a['title']
+                price = float(item.select_one('.price_color').text.lstrip('£'))
+                availability = item.select_one('.availability').text.strip()
+                detail_href = item.h3.a['href'].replace('../../', '')
+                detail_url = f"{base_url}/catalogue/{detail_href}"
+                detail_resp = await client.get(detail_url)
+                detail_soup = BeautifulSoup(detail_resp.text, 'html.parser')
+                category = detail_soup.select('ul.breadcrumb li a')[-1].text.strip()
+                scraped.append({
+                    'title': title,
+                    'price': price,
+                    'category': category,
+                    'availability': availability
+                })
+            page += 1
+        if scraped:
+            # insert many, ignore duplicates
+            await recommended_books_collection.insert_many(scraped)
+        return {"scraped_count": len(scraped)}
 
 
 # GET recommendations with optional filters
@@ -396,65 +281,21 @@ async def get_recommendations(
     price_min: Optional[float] = None,
     price_max: Optional[float] = None
 ):
-    try:
-        print(f"Getting book recommendations with filters - category: {category}, price_min: {price_min}, price_max: {price_max}")
-        
-        query = {}
-        if category:
-            # Special case for "reclamation" category which might not exist
-            if category.lower() == "reclamation":
-                # Try a case-insensitive search across all categories
-                # This looks for any category containing "claim" or similar words
-                query['category'] = {"$regex": "claim|request|complaint|reclamation", "$options": "i"}
-            else:
-                query['category'] = category
-            print(f"Filtering by category: {category}")
-            
-        if price_min is not None or price_max is not None:
-            price_q = {}
-            if price_min is not None:
-                price_q['$gte'] = price_min
-            if price_max is not None:
-                price_q['$lte'] = price_max
-            query['price'] = price_q
-        
-        # Check if we have any books in the collection
-        total_books = await recommended_books_collection.count_documents({})
-        print(f"Total books in collection: {total_books}")
-        
-        # If no books in database, trigger scraping
-        if total_books == 0:
-            print("No books found in database. Triggering scraping...")
-            await scrape_books()
-            
-        books = []
-        async for b in recommended_books_collection.find(query):
-            b['_id'] = str(b['_id'])
-            books.append(b)
-        
-        print(f"Found {len(books)} books matching query: {query}")
-        
-        # If still no books found with "reclamation" category, return books from a default category
-        if len(books) == 0 and category and category.lower() == "reclamation":
-            print("No books found for 'reclamation' category, returning default books")
-            available_categories = await recommended_books_collection.distinct("category")
-            print(f"Available categories: {available_categories}")
-            
-            # If we have categories, pick the first one as default
-            if available_categories:
-                default_category = available_categories[0]
-                print(f"Using default category: {default_category}")
-                default_books = []
-                async for b in recommended_books_collection.find({"category": default_category}):
-                    b['_id'] = str(b['_id'])
-                    b['note'] = "No books found in 'reclamation' category. Showing default category instead."
-                    default_books.append(b)
-                return default_books
-            
-        return books
-    except Exception as e:
-        print(f"Error in get_recommendations: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error fetching book recommendations: {str(e)}")
+    query = {}
+    if category:
+        query['category'] = category
+    if price_min is not None or price_max is not None:
+        price_q = {}
+        if price_min is not None:
+            price_q['$gte'] = price_min
+        if price_max is not None:
+            price_q['$lte'] = price_max
+        query['price'] = price_q
+    books = []
+    async for b in recommended_books_collection.find(query):
+        b['_id'] = str(b['_id'])
+        books.append(b)
+    return books
 
 
 # GET intelligent summary of a book by title
@@ -610,68 +451,3 @@ async def get_user_submissions(user_id: str):
         s["_id"] = str(s["_id"])
         submissions.append(s)
     return submissions
-
-
-# Admin endpoint to check for duplicate emails
-@app.get("/admin/duplicate-users")
-async def check_duplicate_users():
-    """
-    Admin endpoint to check for duplicate emails in the database
-    """
-    try:
-        # Create an aggregation pipeline to find duplicates
-        pipeline = [
-            {"$group": {"_id": "$email", "count": {"$sum": 1}, "ids": {"$push": "$_id"}}},
-            {"$match": {"count": {"$gt": 1}}},
-            {"$sort": {"count": -1}}
-        ]
-        
-        duplicates = []
-        async for doc in etudiants_collection.aggregate(pipeline):
-            # Convert ObjectIds to strings
-            ids = [str(id) for id in doc["ids"]]
-            duplicates.append({
-                "email": doc["_id"],
-                "count": doc["count"],
-                "user_ids": ids
-            })
-            
-        return {
-            "total_duplicates": len(duplicates),
-            "duplicate_emails": duplicates
-        }
-    except Exception as e:
-        logger.error(f"Error checking for duplicates: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-# Endpoint to fix a specific duplicate email by removing extra copies
-@app.delete("/admin/fix-duplicate/{email}")
-async def fix_duplicate_email(email: str):
-    """
-    Fix duplicate users by keeping only the first user with this email
-    """
-    try:
-        # Find all users with this email
-        users = await etudiants_collection.find({"email": email}).to_list(length=100)
-        
-        if len(users) <= 1:
-            return {"message": "No duplicates found for this email"}
-        
-        # Keep the first user (presumably the original one)
-        keep_id = users[0]["_id"]
-        
-        # Create a list of IDs to delete (all except the first one)
-        delete_ids = [user["_id"] for user in users[1:]]
-        
-        # Delete the duplicate users
-        result = await etudiants_collection.delete_many({"_id": {"$in": delete_ids}})
-        
-        return {
-            "message": f"Fixed duplicate for email: {email}",
-            "kept_user_id": str(keep_id),
-            "deleted_count": result.deleted_count,
-            "deleted_ids": [str(id) for id in delete_ids]
-        }
-    except Exception as e:
-        logger.error(f"Error fixing duplicate: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

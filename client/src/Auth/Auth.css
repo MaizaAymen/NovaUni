@@ -1,0 +1,64 @@
+/* Loading spinner for the login button */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  position: absolute;
+  right: 15px;
+  top: calc(50% - 10px);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.submit-btn {
+  position: relative;
+  padding: 12px 20px;
+  background-color: #6c63ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.submit-btn.loading {
+  padding-right: 40px; /* Make space for the spinner */
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #fff3f3;
+  border-left: 4px solid #ff4d4f;
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.error-icon {
+  background-color: #ff4d4f;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  font-weight: bold;
+}

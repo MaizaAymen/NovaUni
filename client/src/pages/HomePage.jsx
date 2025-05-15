@@ -4,18 +4,34 @@ import Navbar1 from "./navbar.jsx"
 
 const HomePages = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [nom, setUsername] = useState("")
   const userId = localStorage.getItem("userId")
   const navigate = useNavigate()
 
   useEffect(() => {
-    const isUserLoggedIn = localStorage.getItem("isLoggedIn") === "true"
-    const storedUsername = localStorage.getItem("prenom") || ""
-    console.log("isLoggedIn:", isUserLoggedIn)
-    console.log("nom:", storedUsername)
-    setIsLoggedIn(isUserLoggedIn)
-    setUsername(storedUsername)
-  }, [])
+    // Check login status when component mounts
+    const checkLoginStatus = () => {
+      const isUserLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+      const storedUsername = localStorage.getItem("prenom") || ""
+      console.log("isLoggedIn:", isUserLoggedIn)
+      console.log("nom:", storedUsername)
+      
+      setIsLoggedIn(isUserLoggedIn)
+      setUsername(storedUsername)
+      setIsLoading(false)
+      
+      // Redirect if not logged in
+      if (!isUserLoggedIn) {
+        console.log("Not logged in, redirecting to login page")
+        navigate("/", { replace: true })
+      }
+    }
+    
+    // Small timeout to ensure localStorage is checked after any potential updates
+    const timer = setTimeout(checkLoginStatus, 100)
+    return () => clearTimeout(timer)
+  }, [navigate])
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn")
@@ -23,6 +39,15 @@ const HomePages = () => {
     setIsLoggedIn(false)
     setUsername("")
     navigate("/")
+  }
+  
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner homepage-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    )
   }
 
   return (
@@ -57,6 +82,61 @@ const HomePages = () => {
               </>
             )}
           </div>
+
+          <div className="heroImage">
+            {/* Animated Books */}
+            <div className="books-container">
+              <div className="book book1">
+                <div className="book-cover">
+                  <div className="book-spine"></div>
+                  <div className="book-title">Mathematics</div>
+                </div>
+                <div className="book-pages">
+                  <div className="book-page"></div>
+                  <div className="book-page"></div>
+                  <div className="book-page"></div>
+                </div>
+              </div>
+              {/* Other book elements... */}
+            </div>
+          </div>
+        </section>
+
+        {/* Rest of the homepage content... */}
+      </main>
+
+      <style jsx>{`
+        /* Loading spinner styles */
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          width: 100%;
+        }
+        
+        .homepage-spinner {
+          width: 50px;
+          height: 50px;
+          border: 5px solid rgba(0, 0, 0, 0.1);
+          border-radius: 50%;
+          border-top-color: #6c63ff;
+          animation: spin 1s ease-in-out infinite;
+          margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+export default HomePages
 
           <div className="heroImage">
             {/* Animated Books */}
