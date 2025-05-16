@@ -160,36 +160,18 @@ class LoginModel(BaseModel):
 
 @app.post("/login")
 async def login(login: LoginModel):
-    try:
-        # Fetch user by email with a timeout
-        user = await etudiants_collection.find_one(
-            {"email": login.email},
-            max_time_ms=5000  # 5 second timeout for the query
-        )
-        
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-            
-        # Check if password is provided and matches
-        if not login.password or (user.get("password") != login.password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-            
+    # Fetch user by email
+    user = await etudiants_collection.find_one({"email": login.email})
+    if user and login.password:
         # Convert ObjectId to string
         user["_id"] = str(user["_id"])
-        
         # Make sure admin is a boolean
         if "admin" not in user:
             user["admin"] = False
-            
         # Remove password from response
         user.pop("password", None)
-        
         return {"user": user}
-        
-    except Exception as e:
-        # Log the error
-        print(f"Login error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
 # Signup endpoint for new users
@@ -247,6 +229,14 @@ async def update_profile(user_id: str, update_data: dict = Body(...)):
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+@app.get("/test")
+async def test():
+    """This is a simple test endpoint that doesn't require database access."""
+    return {
+        "status": "ok",
+        "message": "This is a test response that doesn't require database access"
+    }
 
 
 # Route to scrape books from books.toscrape.com and store in MongoDB

@@ -2,7 +2,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
-import "./Auth.css" // Import CSS file
 
 const Auth = () => {
   const [isSignup, setIsSignup] = useState(false)
@@ -38,6 +37,7 @@ const Auth = () => {
   const handleBlur = (field) => {
     setInputFocus({ ...inputFocus, [field]: formData[field].length > 0 })
   }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -45,7 +45,7 @@ const Auth = () => {
 
     const url = isSignup ? "http://127.0.0.1:8000/signup" : "http://127.0.0.1:8000/login"
 
-    const payload = isSignup ? {
+    const payload = isSignup      ? {
           ...formData,
           age: formData.age ? Number.parseInt(formData.age) : undefined,
           admin: false,
@@ -54,41 +54,25 @@ const Auth = () => {
           email: formData.email,
           password: formData.password,
         };
+        
+    try {
+      const response = await axios.post(url, payload)
 
-    console.log("Submitting to:", url, "with payload:", { ...payload, password: "HIDDEN" })
-          try {
-      // Add timeout to prevent infinite loading
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);  // Increase timeout to 30 seconds
-      
-      console.log(`Attempting to connect to ${url}...`);
-      
-      const response = await axios.post(url, payload, {
-        signal: controller.signal,
-        timeout: 30000, // Increase timeout to 30 seconds
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.data || !response.data.user) {
-        throw new Error("Invalid response from server");
-      }
-
-      const userId = response.data.user._id;
-      
-      // Save user data in localStorage
-      localStorage.setItem("userId", userId);
+      const userId = response.data.user._id
+      localStorage.setItem("userId", userId)
+      // After auth, go to home page; profile is accessed via navbar
       if (isSignup) {
-        setIsSignup(false);
+        setIsSignup(false)
       }
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("speciality", response.data.user.speciality || "");
-      localStorage.setItem("prenom", response.data.user.prenom);
-      localStorage.setItem("admin", response.data.user.admin ? "true" : "false");
-      
-      console.log("Login successful, navigating to HomePages");
-      
-      // Reset form before navigating
+      localStorage.setItem("isLoggedIn", "true")
+      // Store user category for filtering courses
+      localStorage.setItem("speciality", response.data.user.speciality || "")
+      localStorage.setItem("prenom", response.data.user.prenom)
+      localStorage.setItem("admin", response.data.user.admin ? "true" : "false")
+      console.log("Login successful, navigating to HomePages")
+      navigate("/HomePages", { replace: true })
+
+      // Reset form
       setFormData({
         email: "",
         password: "",
@@ -97,30 +81,12 @@ const Auth = () => {
         speciality: "",
         age: "",
         admin: false,
-      });
-      
-      // Navigate after a slight delay to ensure state has updated
-      setTimeout(() => {
-        navigate("/HomePages", { replace: true });
-      }, 100);
-      
+      })
     } catch (error) {
-      console.error("Login/Signup Error:", error);
-      
-      if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
-        setError("Request timed out. Please check your connection and try again.");
-      } else if (error.response) {
-        // Server responded with an error
-        setError(error.response.data.detail || "Authentication failed. Please check your credentials.");
-      } else if (error.request) {
-        // No response received
-        setError("No response from server. Please check your connection and try again.");
-      } else {
-        // Something else went wrong
-        setError(error.message || "Something went wrong. Please try again.");
-      }
+      setError(error.response ? error.response.data.detail : "Something went wrong.")
+      console.error("Error:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -284,9 +250,11 @@ const Auth = () => {
                 <option value="english">English</option>
               </select>
             </div>
-          </div>          <button type="submit" className={`submit-btn ${loading ? "loading" : ""}`} disabled={loading}>
+          </div>
+
+          <button type="submit" className={`submit-btn ${loading ? "loading" : ""}`}>
             <span className="btn-text">{isSignup ? "Sign Up" : "Login"}</span>
-            {loading && <span className="loading-spinner"></span>}
+            <span className="loading-spinner"></span>
           </button>
         </form>
 
@@ -295,7 +263,9 @@ const Auth = () => {
             {isSignup ? "Already have an account? Login" : "Don't have an account? Sign Up"}
           </button>
         </div>
-      </div>      <style>{`
+      </div>
+
+      <style jsx>{`
         /* Base styles */
         .auth-container {
           display: flex;

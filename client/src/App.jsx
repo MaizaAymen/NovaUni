@@ -12,7 +12,7 @@ import HomePage from "./maindashbord/dashbordmain.jsx";
 
 import AddCourseForm from "./courses/coures.jsx";
 import Auth from './Auth/Auth.jsx';
-import HomePageNew from "./pages/HomePageNew.jsx"; // Import the new fixed component
+import HomePages from "./pages/HomePage.jsx";
 import CoursesPage from "./pages/courese.jsx";
 import Navbar1 from "./pages/navbar.jsx";
 import Profiles from "./pages/profiles.jsx";
@@ -48,7 +48,7 @@ function App() {
             <Route path="/Footer" element={<Footer />} />
             <Route path="/HomePage" element={<HomePage />} />
             <Route path="/AddCourseForm" element={<AddCourseForm />} />
-            <Route path="/HomePages" element={<HomePageNew />} />
+            <Route path="/HomePages" element={<HomePages />} />
             <Route path="/CoursesPage" element={<CoursesPage />} />
             <Route path="/CourseTable" element={<CoursesPage />} />
             <Route path="/admin/courses" element={<CourseTable />} />

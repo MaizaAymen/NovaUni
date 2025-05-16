@@ -1,0 +1,813 @@
+import React, { useEffect, useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import './AICourses.css'; // Import the CSS file
+
+// Main component that combines course listing and book viewer
+export default function StudyCourses() {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showCourseBook, setShowCourseBook] = useState(false);
+  const userCategory = localStorage.getItem("speciality");
+  const isAdmin = localStorage.getItem("admin") === "true";
+
+  useEffect(() => {
+    fetchCourses();
+  }, [userCategory]);
+
+  const fetchCourses = () => {
+    setLoading(true);
+    fetch('http://127.0.0.1:8000/courses/')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch courses');
+        return res.json();
+      })
+      .then(data => {
+        // Admin sees all; others see only their category
+        const filtered = isAdmin ? data : data.filter(c => c.category === userCategory);
+        setCourses(filtered);
+        setError(null);
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  };
+
+  const handleSelectCourse = (course) => {
+    setSelectedCourse(course);
+    setShowCourseBook(true);
+  };
+
+  const handleBackToList = () => {
+    setShowCourseBook(false);
+  };
+
+  if (loading) return <div className="loading-container">Loading Courses...</div>;
+  if (error) return <div className="error-container">Error: {error}</div>;
+  if (courses.length === 0) {
+    return (
+      <div className="main-layout">
+        <div className="main-content">
+          <div className="empty-courses">
+            <h2>{isAdmin ? 'All Study Courses' : `Study Courses - ${userCategory}`}</h2>
+            <p>No courses found{!isAdmin ? ` in category '${userCategory}'` : ''}.</p>
+            <button onClick={() => window.location.href = '/newcourse'} className="generate-button">
+              Generate one now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="main-layout">
+      <div className="main-content">
+        <div className="container">
+          {!showCourseBook ? (
+            <CourseList 
+              courses={courses} 
+              onSelectCourse={handleSelectCourse} 
+              onGenerateNew={() => window.location.href = '/newcourse'} 
+              userCategory={userCategory}
+              isAdmin={isAdmin}
+            />
+          ) : (
+            <CourseBookView 
+              course={selectedCourse} 
+              onBack={handleBackToList} 
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Course listing component
+function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAdmin }) {
+  return (
+    <div className="course-list-container">
+      <div className="header">
+        <h1 className="main-title">{isAdmin ? 'All Study Courses' : `Study Courses - ${userCategory}`}</h1>
+        <button onClick={onGenerateNew} className="generate-button">
+          Generate New Course
+        </button>
+      </div>
+
+      <div className="course-grid">
+        {courses.map(course => (
+          <div key={course._id} className="course-card" onClick={() => onSelectCourse(course)}>
+            <div className="course-card-inner">
+              <h3 className="course-title">{course.name}</h3>
+              <div className="course-preview">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]} 
+                  children={course.description.substring(0, 50) + '...'} 
+                />
+              </div>
+              {course.video_url && (
+                <div className="video-container">
+                  <h4 className="video-title">Suggested Video:</h4>
+                  <div className="video-wrapper">
+                    <iframe
+                      src={course.video_url}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={`Video for ${course.name}`}
+                      className="video-iframe"
+                    />
+                  </div>
+                </div>
+              )}
+              <button className="study-button">Study This Course</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Book view component for studying a course
+function CourseBookView({ course, onBack }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pages, setPages] = useState([]);
+  const [showTOC, setShowTOC] = useState(false);
+  const bookRef = useRef(null);
+
+  // Function to detect and convert video links to embedded videos
+  const processContent = (content) => {
+    // Process YouTube links - this regex matches common YouTube URL patterns
+    const youtubeRegex = /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+    return content.replace(youtubeRegex, (match, p1, p2, videoId) => {
+      return `\n\n<video-embed>${videoId}</video-embed>\n\n`;
+    });
+  };
+
+  // Split content into pages with 5 titles per page
+  useEffect(() => {
+    if (course?.description) {
+      // Process content to handle video links
+      const processedContent = processContent(course.description);
+      
+      // Split the content by h2 headers
+      const sections = processedContent.split(/(?=## )/);
+      
+      // Group sections into pages (5 sections per page)
+      const groupedPages = [];
+      for (let i = 0; i < sections.length; i += 5) {
+        const pageContent = sections.slice(i, i + 5).join('\n\n');
+        groupedPages.push(pageContent.trim());
+      }
+      
+      setPages(groupedPages);
+      setCurrentPage(0);
+    }
+  }, [course]);
+
+  const goToNextPage = () => {
+    if (currentPage < pages.length - 1) {
+      setCurrentPage(currentPage + 1);
+      animatePageTurn("forward");
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+      animatePageTurn("backward");
+    }
+  };
+
+  const animatePageTurn = (direction) => {
+    if (bookRef.current) {
+      const animationClass = direction === "forward" ? "flipping" : "flipping-back";
+      bookRef.current.classList.add(animationClass);
+      setTimeout(() => {
+        bookRef.current.classList.remove(animationClass);
+      }, 500);
+    }
+  };
+
+  const toggleTOC = () => {
+    setShowTOC(!showTOC);
+  };
+
+  // Custom renderer for video embeds
+  const VideoEmbed = ({ children }) => {
+    const videoId = children[0];
+    return (
+      <div className="book-video-container">
+        <div className="video-wrapper">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}`}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title="Embedded video"
+            className="video-iframe"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="book-view-container">
+      <div className="book-header">
+        <button onClick={onBack} className="back-button">
+          ← Back to Courses
+        </button>
+        <h2 className="book-title">{course.name}</h2>
+        <button onClick={toggleTOC} className="toc-button">
+          {showTOC ? "Hide Contents" : "Table of Contents"}
+        </button>
+      </div>
+
+      {showTOC && <TableOfContents courseContent={course.description} onSelectSection={(index) => {
+        setCurrentPage(index);
+        setShowTOC(false);
+        animatePageTurn("forward");
+      }} />}
+
+      <div className="book-container" ref={bookRef}>
+        <div className="page-controls">
+          <button
+            onClick={goToPrevPage}
+            disabled={currentPage === 0}
+            className={`page-button ${currentPage === 0 ? 'disabled-button' : ''}`}
+          >
+            ←
+          </button>
+          <span className="page-number">
+            Page {currentPage + 1} of {pages.length}
+          </span>
+          <button
+            onClick={goToNextPage}
+            disabled={currentPage === pages.length - 1}
+            className={`page-button ${currentPage === pages.length - 1 ? 'disabled-button' : ''}`}
+          >
+            →
+          </button>
+        </div>
+
+        <div className="book-page">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            children={pages[currentPage] || ""}
+            components={{
+              h2: ({ node, ...props }) => <h2 className="section-title" {...props} />,
+              p: ({ node, ...props }) => <p className="paragraph" {...props} />,
+              ul: ({ node, ...props }) => <ul className="list" {...props} />,
+              ol: ({ node, ...props }) => <ol className="list" {...props} />,
+              li: ({ node, ...props }) => <li className="list-item" {...props} />,
+              blockquote: ({ node, ...props }) => <blockquote className="blockquote" {...props} />,
+              code: ({ node, ...props }) => <code className="code" {...props} />,
+              a: ({ node, href, children, ...props }) => {
+                // Check if this is a video link
+                if (href && (href.includes("youtube.com") || href.includes("youtu.be"))) {
+                  const videoId = href.includes("youtube.com/watch?v=")
+                    ? href.split("v=")[1].split("&")[0]
+                    : href.includes("youtu.be/")
+                      ? href.split("youtu.be/")[1].split("?")[0]
+                      : null;
+
+                  if (videoId) {
+                    return (
+                      <div className="book-video-container">
+                        <div className="video-wrapper">
+                          <iframe
+                            src={`https://www.youtube.com/embed/${videoId}`}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title="Embedded video"
+                            className="video-iframe"
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                }
+                // Regular link
+                return (
+                  <a href={href} className="link" target="_blank" rel="noopener noreferrer" {...props}>
+                    {children}
+                  </a>
+                );
+              },
+              // Custom component for video embeds
+              "video-embed": VideoEmbed,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="book-navigation">
+        <button 
+          onClick={goToPrevPage} 
+          disabled={currentPage === 0} 
+          className={`nav-button ${currentPage === 0 ? 'disabled-button' : ''}`}
+        >
+          Previous Page
+        </button>
+        <button 
+          onClick={goToNextPage} 
+          disabled={currentPage === pages.length - 1} 
+          className={`nav-button ${currentPage === pages.length - 1 ? 'disabled-button' : ''}`}
+        >
+          Next Page
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Table of Contents Component
+function TableOfContents({ courseContent, onSelectSection }) {
+  const [sections, setSections] = useState([]);
+
+  useEffect(() => {
+    if (courseContent) {
+      // Extract all h2 headers from the content
+      const regex = /## (.*?)(?=\n|$)/g;
+      const matches = [...courseContent.matchAll(regex)];
+
+      const extractedSections = matches.map((match, index) => ({
+        title: match[1].trim(),
+        index: Math.floor(index / 5), // Calculate which page this section will be on (5 sections per page)
+        position: index % 5 // Position within the page
+      }));
+
+      setSections(extractedSections);
+    }
+  }, [courseContent]);
+
+  return (
+    <div className="table-of-contents">
+      <h3 className="toc-heading">Table of Contents</h3>
+      <ul className="toc-list">
+        {sections.map((section, index) => (
+          <li key={index} className="toc-item">
+            <button 
+              onClick={() => onSelectSection(section.index)} 
+              className="toc-item-button"
+            >
+              {section.title}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* CSS Styles */
+const styles = {
+  /* General Styles */
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+    background-color: #f8fafc;
+  }
+
+  .main-layout {
+    display: flex;
+    height: 100vh;
+  }
+
+  .main-content {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: #f8fafc;
+    min-height: 100vh;
+  }
+
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-size: 1.2rem;
+    color: #4b5563;
+  }
+
+  .error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-size: 1.2rem;
+    color: #ef4444;
+  }
+
+  /* Course List Styles */
+  .course-list-container {
+    width: 100%;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1rem;
+  }
+
+  .main-title {
+    font-size: 2.5rem;
+    color: #1e40af;
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .generate-button {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .generate-button:hover {
+    background-color: #059669;
+  }
+
+  .empty-courses {
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .course-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+
+  .course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .course-card-inner {
+    padding: 1.5rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .course-title {
+    font-size: 1.5rem;
+    color: #1e40af;
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+
+  .course-preview {
+    flex: 1;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    color: #4b5563;
+    font-size: 0.95rem;
+  }
+
+  .video-container {
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  .video-title {
+    font-size: 1.1rem;
+    color: #1e40af;
+    margin-bottom: 8px;
+  }
+
+  .video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .video-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .study-button {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+  }
+
+  .study-button:hover {
+    background-color: #059669;
+  }
+
+  /* Book View Styles */
+  .book-view-container {
+    width: 100%;
+  }
+
+  .book-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1rem;
+  }
+
+  .back-button {
+    background-color: transparent;
+    color: #3b82f6;
+    border: 1px solid #3b82f6;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .back-button:hover {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .book-title {
+    font-size: 1.8rem;
+    color: #1e40af;
+    margin: 0;
+    font-weight: 700;
+    text-align: center;
+    flex: 1;
+  }
+
+  .toc-button {
+    background-color: transparent;
+    color: #3b82f6;
+    border: 1px solid #3b82f6;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .toc-button:hover {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .table-of-contents {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .toc-heading {
+    font-size: 1.5rem;
+    color: #1e40af;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+  }
+
+  .toc-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .toc-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .toc-item-button {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
+    font-size: 1rem;
+    text-align: left;
+    padding: 0.5rem 0;
+    width: 100%;
+    transition: color 0.2s;
+  }
+
+  .toc-item-button:hover {
+    color: #1e40af;
+    text-decoration: underline;
+  }
+
+  .book-container {
+    background-color: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: transform 0.5s;
+    transform-style: preserve-3d;
+    perspective: 1500px;
+  }
+
+  .flipping {
+    animation: flipPage 0.5s ease-in-out;
+  }
+  
+  .flipping-back {
+    animation: flipPageBack 0.5s ease-in-out;
+  }
+  
+  @keyframes flipPage {
+    0% { transform: rotateY(0); }
+    50% { transform: rotateY(10deg); }
+    100% { transform: rotateY(0); }
+  }
+  
+  @keyframes flipPageBack {
+    0% { transform: rotateY(0); }
+    50% { transform: rotateY(-10deg); }
+    100% { transform: rotateY(0); }
+  }
+
+  .page-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #1e40af;
+    color: white;
+  }
+
+  .page-button {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+  }
+
+  .page-button:hover:not(.disabled-button) {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .page-number {
+    font-size: 0.9rem;
+  }
+
+  .book-page {
+    background-color: #fffef0;
+    padding: 3rem;
+    min-height: 600px;
+    max-height: 800px;
+    position: relative;
+    overflow-y: auto;
+    line-height: 1.6;
+    font-size: 1.1rem;
+    color: #333;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.05);
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+    color: #1e40af;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Merriweather', 'Georgia', serif;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+  }
+
+  .paragraph {
+    margin-bottom: 1.2rem;
+    text-align: justify;
+    text-indent: 2rem;
+  }
+
+  .list {
+    margin-bottom: 1.2rem;
+    padding-left: 2rem;
+  }
+
+  .list-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .blockquote {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1rem;
+    font-style: italic;
+    color: #4b5563;
+    margin: 1.5rem 0;
+    background-color: rgba(219, 234, 254, 0.3);
+    padding: 1rem;
+  }
+
+  .code {
+    background-color: #f1f5f9;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+
+  .link {
+    color: #2563eb;
+    text-decoration: underline;
+    transition: color 0.2s;
+  }
+
+  .link:hover {
+    color: #1e40af;
+  }
+
+  .book-video-container {
+    margin: 2rem 0;
+    width: 100%;
+  }
+
+  .book-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+  }
+
+  .nav-button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .nav-button:hover:not(.disabled-button) {
+    background-color: #2563eb;
+  }
+
+  .disabled-button {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+</style>}

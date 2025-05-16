@@ -1,37 +1,42 @@
+"use client"
+
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import Navbar1 from "./navbar.jsx"
 
 const HomePages = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [nom, setUsername] = useState("")
+  const [currentQuote, setCurrentQuote] = useState(0)
   const userId = localStorage.getItem("userId")
   const navigate = useNavigate()
 
+  const quotes = [
+    "Education is the most powerful weapon which you can use to change the world. - Nelson Mandela",
+    "Success doesn't come from what you do occasionally, it comes from what you do consistently.",
+    "Dream big. Work hard. Stay focused. Stay humble.",
+    "Push yourself, because no one else is going to do it for you.",
+    "Every expert was once a beginner.",
+    "The future belongs to those who prepare for it today. - Malcolm X",
+    "Your education is a dress rehearsal for a life that is yours to lead. - Nora Ephron",
+    "Don't let what you cannot do interfere with what you can do. - John Wooden",
+  ]
+
   useEffect(() => {
-    // Check login status when component mounts
-    const checkLoginStatus = () => {
-      const isUserLoggedIn = localStorage.getItem("isLoggedIn") === "true"
-      const storedUsername = localStorage.getItem("prenom") || ""
-      console.log("isLoggedIn:", isUserLoggedIn)
-      console.log("nom:", storedUsername)
-      
-      setIsLoggedIn(isUserLoggedIn)
-      setUsername(storedUsername)
-      setIsLoading(false)
-      
-      // Redirect if not logged in
-      if (!isUserLoggedIn) {
-        console.log("Not logged in, redirecting to login page")
-        navigate("/", { replace: true })
-      }
-    }
-    
-    // Small timeout to ensure localStorage is checked after any potential updates
-    const timer = setTimeout(checkLoginStatus, 100)
-    return () => clearTimeout(timer)
-  }, [navigate])
+    const isUserLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    const storedUsername = localStorage.getItem("prenom") || ""
+    console.log("isLoggedIn:", isUserLoggedIn)
+    console.log("nom:", storedUsername)
+    setIsLoggedIn(isUserLoggedIn)
+    setUsername(storedUsername)
+
+    // Rotate through quotes
+    const quoteInterval = setInterval(() => {
+      setCurrentQuote((prev) => (prev + 1) % quotes.length)
+    }, 5000)
+
+    return () => clearInterval(quoteInterval)
+  }, [quotes.length])
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn")
@@ -39,15 +44,6 @@ const HomePages = () => {
     setIsLoggedIn(false)
     setUsername("")
     navigate("/")
-  }
-  
-  if (isLoading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner homepage-spinner"></div>
-        <p>Loading...</p>
-      </div>
-    )
   }
 
   return (
@@ -71,6 +67,42 @@ const HomePages = () => {
             ) : (
               <>
                 <h1>Manage Your Educational Institution with Ease</h1>
+
+                {/* Inspirational Quotes */}
+                <div className="inspirational-quote">
+                  {quotes.map((quote, index) => (
+                    <div key={index} className={`quote-text ${index === currentQuote ? "active" : ""}`}>
+                      {quote}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Animated Senior Web Developer text */}
+                <div className="animated-text-container">
+                  <div className="animated-text">
+                    <span>S</span>
+                    <span>e</span>
+                    <span>n</span>
+                    <span>i</span>
+                    <span>o</span>
+                    <span>r</span>
+                    <span>&nbsp;</span>
+                    <span>W</span>
+                    <span>e</span>
+                    <span>b</span>
+                    <span>&nbsp;</span>
+                    <span>D</span>
+                    <span>e</span>
+                    <span>v</span>
+                    <span>e</span>
+                    <span>l</span>
+                    <span>o</span>
+                    <span>p</span>
+                    <span>e</span>
+                    <span>r</span>
+                  </div>
+                </div>
+
                 <p>
                   A comprehensive student management system to streamline administration, enhance learning, and improve
                   communication.
@@ -82,61 +114,6 @@ const HomePages = () => {
               </>
             )}
           </div>
-
-          <div className="heroImage">
-            {/* Animated Books */}
-            <div className="books-container">
-              <div className="book book1">
-                <div className="book-cover">
-                  <div className="book-spine"></div>
-                  <div className="book-title">Mathematics</div>
-                </div>
-                <div className="book-pages">
-                  <div className="book-page"></div>
-                  <div className="book-page"></div>
-                  <div className="book-page"></div>
-                </div>
-              </div>
-              {/* Other book elements... */}
-            </div>
-          </div>
-        </section>
-
-        {/* Rest of the homepage content... */}
-      </main>
-
-      <style jsx>{`
-        /* Loading spinner styles */
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          width: 100%;
-        }
-        
-        .homepage-spinner {
-          width: 50px;
-          height: 50px;
-          border: 5px solid rgba(0, 0, 0, 0.1);
-          border-radius: 50%;
-          border-top-color: #6c63ff;
-          animation: spin 1s ease-in-out infinite;
-          margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-export default HomePages
 
           <div className="heroImage">
             {/* Animated Books */}
@@ -364,6 +341,149 @@ export default HomePages
           font-size: 1.1rem;
           margin-bottom: 2rem;
           color: #4b5563;
+        }
+        
+        /* Inspirational Quote Styles */
+        .inspirational-quote {
+          position: relative;
+          height: 80px;
+          margin: 0 auto 1.5rem;
+          overflow: hidden;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.3);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+          padding: 0 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .quote-text {
+          position: absolute;
+          width: 100%;
+          text-align: center;
+          font-size: 1.1rem;
+          font-style: italic;
+          color: #1e40af;
+          font-weight: 500;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .quote-text.active {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        
+        .inspirational-quote::before,
+        .inspirational-quote::after {
+          content: '"';
+          position: absolute;
+          font-size: 3rem;
+          color: rgba(37, 99, 235, 0.2);
+          font-family: Georgia, serif;
+          line-height: 1;
+        }
+        
+        .inspirational-quote::before {
+          top: 5px;
+          left: 10px;
+        }
+        
+        .inspirational-quote::after {
+          bottom: -15px;
+          right: 10px;
+        }
+
+        /* Animated Text Styles */
+        .animated-text-container {
+          margin: 1rem 0 1.5rem;
+          overflow: hidden;
+          height: 40px;
+          position: relative;
+        }
+
+        .animated-text {
+          display: inline-block;
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #2563eb;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          position: relative;
+        }
+
+        .animated-text span {
+          display: inline-block;
+          opacity: 0;
+          transform: translateY(20px);
+          animation: fadeInUp 0.5s forwards;
+        }
+
+        @keyframes fadeInUp {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Apply different delays to each letter */
+        .animated-text span:nth-child(1) { animation-delay: 0.1s; }
+        .animated-text span:nth-child(2) { animation-delay: 0.15s; }
+        .animated-text span:nth-child(3) { animation-delay: 0.2s; }
+        .animated-text span:nth-child(4) { animation-delay: 0.25s; }
+        .animated-text span:nth-child(5) { animation-delay: 0.3s; }
+        .animated-text span:nth-child(6) { animation-delay: 0.35s; }
+        .animated-text span:nth-child(7) { animation-delay: 0.4s; }
+        .animated-text span:nth-child(8) { animation-delay: 0.45s; }
+        .animated-text span:nth-child(9) { animation-delay: 0.5s; }
+        .animated-text span:nth-child(10) { animation-delay: 0.55s; }
+        .animated-text span:nth-child(11) { animation-delay: 0.6s; }
+        .animated-text span:nth-child(12) { animation-delay: 0.65s; }
+        .animated-text span:nth-child(13) { animation-delay: 0.7s; }
+        .animated-text span:nth-child(14) { animation-delay: 0.75s; }
+        .animated-text span:nth-child(15) { animation-delay: 0.8s; }
+        .animated-text span:nth-child(16) { animation-delay: 0.85s; }
+        .animated-text span:nth-child(17) { animation-delay: 0.9s; }
+        .animated-text span:nth-child(18) { animation-delay: 0.95s; }
+        .animated-text span:nth-child(19) { animation-delay: 1s; }
+        .animated-text span:nth-child(20) { animation-delay: 1.05s; }
+
+        /* Add a subtle wave effect after initial animation */
+        .animated-text::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #2563eb, transparent);
+          animation: wave 2s ease-in-out infinite;
+          animation-delay: 1.5s;
+        }
+
+        @keyframes wave {
+          0%, 100% {
+            transform: translateX(-100%);
+          }
+          50% {
+            transform: translateX(100%);
+          }
+        }
+
+        /* Add a subtle color pulse animation */
+        .animated-text {
+          animation: colorPulse 4s ease-in-out infinite;
+          animation-delay: 2s;
+        }
+
+        @keyframes colorPulse {
+          0%, 100% {
+            color: #2563eb;
+          }
+          50% {
+            color: #3b82f6;
+          }
         }
 
         .heroBtns {
@@ -963,6 +1083,20 @@ export default HomePages
             justify-content: flex-start;
           }
 
+          .animated-text-container {
+            text-align: left;
+          }
+          
+          .inspirational-quote {
+            text-align: left;
+          }
+          
+          .quote-text {
+            text-align: left;
+            padding-left: 2rem;
+            padding-right: 2rem;
+          }
+
           .footerContent {
             flex-direction: row;
             justify-content: space-between;
@@ -981,6 +1115,19 @@ export default HomePages
         @media (max-width: 767px) {
           .heroContent h1 {
             font-size: 2rem;
+          }
+
+          .animated-text {
+            font-size: 1.25rem;
+          }
+          
+          .inspirational-quote {
+            height: 100px;
+          }
+          
+          .quote-text {
+            font-size: 0.95rem;
+            padding: 0 1.5rem;
           }
 
           .book {
