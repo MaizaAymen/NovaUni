@@ -1,6 +1,6 @@
 # NovaUni - Modern Educational Platform
 ![alt text](screenshots/image-8.png)
-![alt text](image-7.png)
+![alt text](screenshots/image-7.png)
 
 ## Overview
 
@@ -14,15 +14,15 @@ NovaUni is a comprehensive educational platform designed to modernize the learni
 - Save favorite courses for quick access
 - AI-powered course generation
 
-![alt text](image-2.png)
-![alt text](image-3.png)
+![alt text](screenshots/image-2.png)
+![alt text](screenshots/image-3.png)
 
 ### 👨‍🎓 Student Management
 - Student profiles with personalized course recommendations
 - Track learning progress
 - Specialization options for customized learning paths
 
-![alt text](image-4.png)
+![alt text](screenshots/image-4.png)
 
 ### 📊 Quiz System
 - Interactive quizzes for knowledge assessment
@@ -30,21 +30,21 @@ NovaUni is a comprehensive educational platform designed to modernize the learni
 - Immediate feedback and scoring
 - AI-generated quiz content
 
-![alt text](image-5.png)
+![alt text](screenshots/image-5.png)
 
 ### 🤖 AI Integration
 - AI-powered course content generation
 - Personalized learning recommendations
 - Automatic content categorization
 
-![alt text](image-6.png)
+![alt text](screenshots/image-6.png)
 
 ### 👩‍🏫 Administrator Tools
 - Comprehensive dashboard for monitoring
 - Student and course management
 - Content creation and editing tools
 
-![alt text](image-1.png)
+![alt text](screenshots/image-1.png)
 
 ## Tech Stack
 
@@ -146,10 +146,10 @@ Once the backend is running, you can access the automatic API documentation at:
 ## Screenshots
 
 ### Authentication
-![alt text](image-9.png)
+![alt text](screenshots/image-9.png)
 
 ### Quiz System
-![alt text](image-11.png)
+![alt text](screenshots/image-11.png)
 
 ## Future Enhancements
 
