@@ -1,5 +1,5 @@
 # NovaUni - Modern Educational Platform
-![alt text](image-8.png)
+![alt text](screenshots/image-8.png)
 ![alt text](image-7.png)
 
 ## Overview
