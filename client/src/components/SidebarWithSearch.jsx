@@ -232,7 +232,7 @@ export default function Sidebar() {  // State for active link and collapsed stat
         <div style={styles.sidebarHeader}>
           <div style={styles.logo}>
             <div style={styles.logoIcon}>🎓</div>
-            <span style={styles.logoText}>EduDash</span>
+            <span style={styles.logoText}>Study With Me</span>
           </div>
           <button
             style={styles.toggleButton}
