@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import SidebarWithSearch from '../components/SidebarWithSearch.jsx';
 import Navbar1 from './navbar.jsx';
 import { data } from 'react-router-dom';
+import FavoriteButton from '../components/FavoriteButton';
 
 // Main component that combines course listing and book viewer
 export default function StudyCourses() {
@@ -14,6 +15,17 @@ export default function StudyCourses() {
   const [showCourseBook, setShowCourseBook] = useState(false);
   const userCategory = localStorage.getItem("speciality");
   const isAdmin = localStorage.getItem("admin") === "true";
+  const userId = localStorage.getItem("userId");
+
+  // Debug: log user information
+  useEffect(() => {
+    console.log('StudyCourses user info:', { 
+      userId, 
+      userCategory, 
+      isAdmin, 
+      isLoggedIn: localStorage.getItem("isLoggedIn") 
+    });
+  }, [userId, userCategory, isAdmin]);
 
   useEffect(() => {
     fetchCourses();
@@ -66,8 +78,7 @@ export default function StudyCourses() {
         </div>
       </div>
     );
-  }
-  return (
+  }  return (
     <>
     <Navbar1 />
     <div style={{ display: 'flex', height: '100vh' }}>
@@ -81,11 +92,13 @@ export default function StudyCourses() {
               onGenerateNew={() => window.location.href = '/newcourse'} 
               userCategory={userCategory}
               isAdmin={isAdmin}
+              userId={userId}
             />
           ) : (
             <CourseBookView 
               course={selectedCourse} 
-              onBack={handleBackToList} 
+              onBack={handleBackToList}
+              userId={userId}
             />
           )}
         </div>
@@ -96,7 +109,12 @@ export default function StudyCourses() {
 }
 
 // Course listing component
-function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAdmin }) {
+function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAdmin, userId }) {
+  // Function to prevent click propagation for the favorite button
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation();
+  };
+
   return (
     <>
       <div style={styles.courseListContainer}>
@@ -124,9 +142,13 @@ function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAd
           {courses.map(course => (
             <div key={course._id} style={styles.courseCard} onClick={() => onSelectCourse(course)}>
               <div style={styles.courseCardInner}>
-                <h3 style={styles.courseTitle}>{course.name}</h3>
+                <div style={styles.courseHeader}>
+                  <h3 style={styles.courseTitle}>{course.name}</h3>
+                  <div onClick={handleFavoriteClick} style={styles.favoriteButtonContainer}>
+                    <FavoriteButton userId={userId} courseId={course._id} size="small" />
+                  </div>
+                </div>
                 <div style={styles.coursePreview}>
-
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]} 
                     children={course.description.substring(0, 50) + '...'} 
@@ -144,11 +166,16 @@ function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAd
 }
 
 // Book view component for studying a course
-function CourseBookView({ course, onBack }) {
+function CourseBookView({ course, onBack, userId }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [pages, setPages] = useState([]);
   const [showTOC, setShowTOC] = useState(false);
   const bookRef = useRef(null);
+
+  // Function to prevent click propagation for the favorite button
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation();
+  };
 
   // Split content into pages with 5 titles per page
   useEffect(() => {
@@ -221,13 +248,16 @@ function CourseBookView({ course, onBack }) {
             100% { transform: rotateY(0); }
           }
         `}
-      </style>
-
-      <div style={styles.bookHeader}>
+      </style>      <div style={styles.bookHeader}>
         <button onClick={onBack} style={styles.backButton}>
           ← Back to Courses
         </button>
-        <h2 style={styles.bookTitle}>{course.name}</h2>
+        <div style={styles.titleContainer}>
+          <h2 style={styles.bookTitle}>{course.name}</h2>
+          <div onClick={handleFavoriteClick} style={styles.favoriteButtonBookView}>
+            <FavoriteButton userId={userId} courseId={course._id} size="medium" />
+          </div>
+        </div>
         <button onClick={toggleTOC} style={styles.tocButton}>
           {showTOC ? "Hide Contents" : "Table of Contents"}
         </button>
@@ -411,18 +441,27 @@ const styles = {
     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
     transition: "transform 0.2s, box-shadow 0.2s",
     cursor: "pointer",
-  },
-  courseCardInner: {
+  },  courseCardInner: {
     padding: "1.5rem",
     height: "100%",
     display: "flex",
     flexDirection: "column",
   },
+  courseHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "1rem"
+  },
   courseTitle: {
     fontSize: "1.5rem",
     color: "#1e40af",
     marginTop: 0,
-    marginBottom: "1rem",
+    marginBottom: 0,
+    flex: 1
+  },
+  favoriteButtonContainer: {
+    marginLeft: "10px",
   },
   coursePreview: {
     flex: 1,
@@ -447,14 +486,23 @@ const styles = {
   // Book View Styles
   bookViewContainer: {
     width: "100%",
-  },
-  bookHeader: {
+  },  bookHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "1.5rem",
     borderBottom: "1px solid #e5e7eb",
     paddingBottom: "1rem",
+  },
+  titleContainer: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  favoriteButtonBookView: {
+    marginLeft: "15px",
+    marginTop: "3px",
   },
   backButton: {
     backgroundColor: "transparent",

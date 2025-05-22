@@ -10,7 +10,11 @@ const FavoriteButton = ({ userId, courseId, onToggle, size = 'medium' }) => {
   const [toastMessage, setToastMessage] = useState('');
   // Vérification de l'état de connexion directement à partir de localStorage
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
-
+  
+  // Debug: log props values when component mounts
+  useEffect(() => {
+    console.log('FavoriteButton props:', { userId, courseId, size });
+  }, []);
   useEffect(() => {
     // Vérifier l'état de connexion
     const loggedInStatus = localStorage.getItem("isLoggedIn") === "true";
@@ -29,6 +33,23 @@ const FavoriteButton = ({ userId, courseId, onToggle, size = 'medium' }) => {
         .finally(() => {
           setIsLoading(false);
         });
+    } else if (!userId && loggedInStatus) {
+      // Tentative de récupération du userId depuis localStorage
+      const storedUserId = localStorage.getItem("userId");
+      if (storedUserId && courseId) {
+        console.log("Récupération du userId depuis localStorage dans useEffect:", storedUserId);
+        setIsLoading(true);
+        FavoriteService.isFavorite(storedUserId, courseId)
+          .then(response => {
+            setIsFavorite(response.data);
+          })
+          .catch(error => {
+            console.error('Erreur lors de la vérification du favori:', error);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      }
     }
   }, [userId, courseId]);
 
@@ -40,8 +61,10 @@ const FavoriteButton = ({ userId, courseId, onToggle, size = 'medium' }) => {
       setShowToast(false);
     }, 3000); // Le toast disparaît après 3 secondes
   };
-
   const toggleFavorite = () => {
+    // Debug: log values when toggling
+    console.log('toggleFavorite called with:', { userId, courseId, isUserLoggedIn });
+    
     // Vérification de l'état de connexion à partir du state local
     if (!isUserLoggedIn) {
       displayToast("Veuillez vous connecter pour ajouter des favoris");
@@ -52,18 +75,32 @@ const FavoriteButton = ({ userId, courseId, onToggle, size = 'medium' }) => {
     // c'est un problème technique et non un problème d'authentification
     if (!userId || !courseId) {
       displayToast("Erreur technique: Impossible d'identifier le cours ou l'utilisateur");
-      console.error("Erreur technique: userId ou courseId manquant malgré l'état connecté");
+      console.error("Erreur technique: userId ou courseId manquant malgré l'état connecté", { userId, courseId });
+      
+      // Tentative de récupération directe depuis localStorage
+      const storedUserId = localStorage.getItem("userId");
+      if (storedUserId && !userId && courseId) {
+        console.log("Tentative de récupération du userId depuis localStorage:", storedUserId);
+        // Continuer avec le userId récupéré
+        handleFavoriteAction(storedUserId, courseId);
+        return;
+      }
+      
       return;
-    }
-
-    if (isLoading) return; // Éviter les clics multiples
+    }    if (isLoading) return; // Éviter les clics multiples
     
+    // Utiliser les valeurs de props
+    handleFavoriteAction(userId, courseId);
+  };
+  
+  // Helper function to handle the favorite action
+  const handleFavoriteAction = (userIdToUse, courseIdToUse) => {
     setIsLoading(true);
     setIsAnimating(true);
     
     if (isFavorite) {
       // Supprimer des favoris
-      FavoriteService.removeFavorite(userId, courseId)
+      FavoriteService.removeFavorite(userIdToUse, courseIdToUse)
         .then(() => {
           setIsFavorite(false);
           if (onToggle) onToggle(false);
@@ -79,7 +116,7 @@ const FavoriteButton = ({ userId, courseId, onToggle, size = 'medium' }) => {
         });
     } else {
       // Ajouter aux favoris
-      FavoriteService.addFavorite(userId, courseId)
+      FavoriteService.addFavorite(userIdToUse, courseIdToUse)
         .then(() => {
           setIsFavorite(true);
           if (onToggle) onToggle(true);
