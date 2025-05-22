@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SidebarWithSearch from '../components/SidebarWithSearch.jsx';
 import Navbar1 from './navbar.jsx';
+import { data } from 'react-router-dom';
 
 // Main component that combines course listing and book viewer
 export default function StudyCourses() {
@@ -22,10 +23,13 @@ export default function StudyCourses() {
     setLoading(true);
     fetch('http://127.0.0.1:8000/courses/')
       .then(res => {
+        console.log(res);  
         if (!res.ok) throw new Error('Failed to fetch courses');
         return res.json();
+        
       })
       .then(data => {
+        console.log(data); // Log the fetched data
         // Admin sees all; others see only their category
         const filtered = isAdmin ? data : data.filter(c => c.category === userCategory);
         setCourses(filtered);
@@ -45,29 +49,29 @@ export default function StudyCourses() {
   };
 
   if (loading) return <div style={styles.loadingContainer}>Loading Courses...</div>;
-  if (error) return <div style={styles.errorContainer}>Error: {error}</div>;
-  if (courses.length === 0) {
+  if (error) return <div style={styles.errorContainer}>Error: {error}</div>;  if (courses.length === 0) {
     return (
       <div style={{ display: 'flex', height: '100vh' }}>
-        <SidebarWithSearch />
+        {isAdmin && <SidebarWithSearch />}
         <div className="main-content" style={{ flex: 1, padding: '1rem' }}>
           <div style={styles.emptyCourses}>
             <h2>{isAdmin ? 'All Study Courses' : `Study Courses - ${userCategory}`}</h2>
             <p>No courses found{!isAdmin ? ` in category '${userCategory}'` : ''}.</p>
-            <button onClick={() => window.location.href = '/newcourse'} style={styles.generateButton}>
-              Generate one now
-            </button>
+            {isAdmin && (
+              <button onClick={() => window.location.href = '/newcourse'} style={styles.generateButton}>
+                Generate one now
+              </button>
+            )}
           </div>
         </div>
       </div>
     );
   }
-
   return (
     <>
     <Navbar1 />
     <div style={{ display: 'flex', height: '100vh' }}>
-      <SidebarWithSearch />
+      {isAdmin && <SidebarWithSearch />}
       <div className="main-content" style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
         <div style={styles.container}>
           {!showCourseBook ? (
@@ -95,22 +99,25 @@ export default function StudyCourses() {
 function CourseList({ courses, onSelectCourse, onGenerateNew, userCategory, isAdmin }) {
   return (
     <>
-    
-    <div style={styles.courseListContainer}>
+      <div style={styles.courseListContainer}>
       <div style={styles.header}>
         <h1 style={styles.mainTitle}>{isAdmin ? 'All Study Courses' : `Study Courses - ${userCategory}`}</h1>
-        <button onClick={onGenerateNew} style={styles.generateButton}>
-          Generate New Course
-        </button>
+        {isAdmin && (
+          <button onClick={onGenerateNew} style={styles.generateButton}>
+            Generate New Course
+          </button>
+        )}
       </div>
 
       {courses.length === 0 ? (
         <div style={styles.emptyCourses}>
           <h2>No courses found</h2>
           <p>Start by generating your first course</p>
-          <button onClick={onGenerateNew} style={styles.generateButton}>
-            Generate Course
-          </button>
+          {isAdmin && (
+            <button onClick={onGenerateNew} style={styles.generateButton}>
+              Generate Course
+            </button>
+          )}
         </div>
       ) : (
         <div style={styles.courseGrid}>

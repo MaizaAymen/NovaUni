@@ -1,12 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 
-export default function Sidebar() {
-  // State for active link and collapsed state
+export default function Sidebar() {  // State for active link and collapsed state
   const [activeLink, setActiveLink] = useState("/")
   const [collapsed, setCollapsed] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status on component mount
+  useEffect(() => {
+    const adminStatus = localStorage.getItem("admin") === "true";
+    setIsAdmin(adminStatus);
+  }, []);
+
+  // If not admin, don't render the sidebar
+  if (!isAdmin) {
+    return null;
+  }
 
   // Handle link click
   const handleLinkClick = (path) => {

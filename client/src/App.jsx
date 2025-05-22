@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, Link, useParams, Navigate } from 'react-router-dom';
 
 import './App.css';
 import AddEtudiant from "./managestudent/add.jsx";
@@ -31,6 +31,18 @@ function ProfilesWrapper() {
   return <Profiles userId={userId} />;
 }
 
+// Admin Route protection component
+const AdminRoute = ({ element }) => {
+  const isAdmin = localStorage.getItem("admin") === "true";
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  
+  if (!isLoggedIn) {
+    return <Navigate to="/" />;
+  }
+  
+  return isAdmin ? element : <Navigate to="/HomePages" />;
+};
+
 function App() {
   return (
     <Router>
@@ -39,27 +51,31 @@ function App() {
         <div style={{ flex: 1 }}>
           
           <Routes>
-            <Route path="/AddEtudiant" element={<AddEtudiant />} />
-            <Route path="/navbar" element={<Navbar1 />} />
             <Route path="/" element={<Auth />} />
-            <Route path="/StudentTable" element={<StudentTable />} />
-            <Route path="/Navbar" element={<Navbar />} />
-            <Route path="/Dashboard" element={<Dashboard />} />
-            <Route path="/Footer" element={<Footer />} />
-            <Route path="/HomePage" element={<HomePage />} />
-            <Route path="/AddCourseForm" element={<AddCourseForm />} />
             <Route path="/HomePages" element={<HomePages />} />
-            <Route path="/CoursesPage" element={<CoursesPage />} />
-            <Route path="/CourseTable" element={<CoursesPage />} />
-            <Route path="/admin/courses" element={<CourseTable />} />
-            <Route path="/profile/:userId" element={<ProfilesWrapper />} />
-            <Route path="/newcourse" element={<NewCourse />} />
+            <Route path="/navbar" element={<Navbar1 />} />
+            
+            {/* Routes that all logged in users can see */}
             <Route path="/ai-courses" element={<AICourses />} />
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/favorites" element={<MyFavorites />} />
             <Route path="/quizzes" element={<QuizList />} />
-            <Route path="/add-quiz" element={<AddQuiz />} />
             <Route path="/quizzes/:quizId" element={<QuizTake />} />
+            <Route path="/profile/:userId" element={<ProfilesWrapper />} />
+            
+            {/* Protected routes - Admin only */}
+            <Route path="/AddEtudiant" element={<AdminRoute element={<AddEtudiant />} />} />
+            <Route path="/StudentTable" element={<AdminRoute element={<StudentTable />} />} />
+            <Route path="/Navbar" element={<AdminRoute element={<Navbar />} />} />
+            <Route path="/Dashboard" element={<AdminRoute element={<Dashboard />} />} />
+            <Route path="/Footer" element={<AdminRoute element={<Footer />} />} />
+            <Route path="/HomePage" element={<AdminRoute element={<HomePage />} />} />
+            <Route path="/AddCourseForm" element={<AdminRoute element={<AddCourseForm />} />} />
+            <Route path="/CoursesPage" element={<AdminRoute element={<CoursesPage />} />} />
+            <Route path="/CourseTable" element={<AdminRoute element={<CoursesPage />} />} />
+            <Route path="/admin/courses" element={<AdminRoute element={<CourseTable />} />} />
+            <Route path="/newcourse" element={<AdminRoute element={<NewCourse />} />} />
+            <Route path="/add-quiz" element={<AdminRoute element={<AddQuiz />} />} />
           </Routes>
         </div>
       </div>

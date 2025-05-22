@@ -93,7 +93,6 @@ const QuizTake = () => {
       setSelectedOption(answers[currentQuestion - 1] || null)
     }
   }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!quiz) return
@@ -120,14 +119,51 @@ const QuizTake = () => {
         quiz_id: quizIdentifier,
         answers: answers,
       }
-      // Simulate result instantly (no API call)
       // Calculate score locally
       let correct = 0
       quiz.questions.forEach((q, i) => {
         if (answers[i] === q.correct_answer) correct++
       })
       const localScore = Math.round((correct / quiz.questions.length) * 100)
-      setScore(localScore)
+      setScore(localScore)      // Save the quiz certificate/badge
+      try {
+        const certificateData = {
+          student_id: userId,
+          quiz_id: quizIdentifier,
+          quiz_name: quiz.subject || quiz.name || "Quiz",
+          score: localScore,
+          date: new Date().toISOString(),
+          questions_count: quiz.questions.length,
+          correct_count: correct
+        }
+        
+        // Store the certificate locally in case backend API isn't ready
+        const existingCerts = JSON.parse(localStorage.getItem("userCertificates") || "[]");
+        existingCerts.push(certificateData);
+        localStorage.setItem("userCertificates", JSON.stringify(existingCerts));
+        
+        // Try to send certificate data to backend
+        try {
+          const certResponse = await fetch("http://127.0.0.1:8000/certificates/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(certificateData),
+          });
+          
+          if (certResponse.ok) {
+            console.log("Certificate saved to server:", await certResponse.json());
+          } else {
+            console.log("Certificate saved locally only (API endpoint not available)");
+          }
+        } catch (apiError) {
+          console.log("Certificate saved locally only:", apiError);
+        }
+      } catch (certError) {
+        console.error("Failed to save certificate:", certError);
+      }
+
       setTimeout(() => {
         setSubmitted(true)
         setIsSubmitting(false)

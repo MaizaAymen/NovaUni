@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react"
 import Navbar1 from "./navbar"
 
-export default function Profiles({ userId }) {
-  const [profile, setProfile] = useState(null)
+export default function Profiles({ userId }) {  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [formData, setFormData] = useState({ nom: "", prenom: "", email: "", speciality: "", age: null })
   const [editMode, setEditMode] = useState(false)
   const [submissions, setSubmissions] = useState([])
+  const [certificates, setCertificates] = useState([])
 
   useEffect(() => {
     if (!userId) return
@@ -41,6 +41,38 @@ export default function Profiles({ userId }) {
       .then((data) => setSubmissions(data))
       .catch(() => setSubmissions([]))
   }, [userId])
+  // Fetch certificates
+  useEffect(() => {
+    if (!userId) return;
+    
+    // First try to get certificates from API
+    fetch(`http://127.0.0.1:8000/certificates/${userId}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch certificates");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        // Ensure data is an array
+        setCertificates(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.error("Error fetching certificates from API:", err);
+        
+        // Fallback to local storage if API fails
+        try {
+          const localCerts = JSON.parse(localStorage.getItem("userCertificates") || "[]");
+          // Only show certificates for this user
+          const userCerts = localCerts.filter(cert => cert.student_id === userId);
+          setCertificates(userCerts);
+          console.log("Using locally stored certificates instead");
+        } catch (localErr) {
+          console.error("Error reading local certificates:", localErr);
+          setCertificates([]);
+        }
+      });
+  }, [userId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -256,8 +288,64 @@ export default function Profiles({ userId }) {
     errorIcon: {
       marginRight: "0.5rem",
       fontSize: "1.25rem",
+    },    certificate: {
+      backgroundColor: "#ffffff",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      padding: "1rem",
+      marginBottom: "1rem",
+      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+      position: "relative",
+      overflow: "hidden",
     },
-    badge: {
+    certificateHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "0.75rem",
+    },
+    certificateTitle: {
+      fontSize: "1.1rem",
+      fontWeight: "600",
+      color: "#334155",
+      margin: 0,
+    },
+    certificateDate: {
+      fontSize: "0.8rem",
+      color: "#64748b",
+    },
+    certificateScore: {
+      display: "flex",
+      alignItems: "center",
+      marginBottom: "0.5rem",
+    },
+    certificateBadge: {
+      width: "60px",
+      height: "60px",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "column",
+      marginRight: "1rem",
+    },
+    certificateDetails: {
+      flex: 1,
+    },
+    certificatePercent: {
+      fontSize: "1.25rem",
+      fontWeight: "bold",
+      marginBottom: "-0.25rem",
+    },
+    certificateLabel: {
+      fontSize: "0.75rem",
+      opacity: 0.8,
+    },
+    certificateInfo: {
+      fontSize: "0.9rem",
+      color: "#64748b",
+    },    badge: {
       display: "inline-block",
       padding: "0.25rem 0.75rem",
       borderRadius: "9999px",
@@ -281,10 +369,99 @@ export default function Profiles({ userId }) {
       marginBottom: "1rem",
       display: "flex",
       alignItems: "center",
-    },
-    infoIcon: {
+    },    infoIcon: {
       marginRight: "0.5rem",
       color: "#10b981",
+    },
+    certificate: {
+      backgroundColor: "#ffffff",
+      borderRadius: "8px",
+      border: "1px solid #e2e8f0",
+      padding: "1rem",
+      marginBottom: "1rem",
+      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+      position: "relative",
+      overflow: "hidden",
+    },
+    certificateHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "0.75rem",
+    },
+    certificateTitle: {
+      fontSize: "1.1rem",
+      fontWeight: "600",
+      color: "#334155",
+      margin: 0,
+    },
+    certificateDate: {
+      fontSize: "0.8rem",
+      color: "#64748b",
+    },
+    certificateScore: {
+      display: "flex",
+      alignItems: "center",
+      marginBottom: "0.5rem",
+    },
+    certificateBadge: {
+      width: "60px",
+      height: "60px",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "column",
+      marginRight: "1rem",
+    },
+    certificateDetails: {
+      flex: 1,
+    },
+    certificatePercent: {
+      fontSize: "1.25rem",
+      fontWeight: "bold",
+      marginBottom: "-0.25rem",
+    },
+    certificateLabel: {
+      fontSize: "0.75rem",
+      opacity: 0.8,
+    },
+    certificateInfo: {
+      fontSize: "0.9rem",
+      color: "#64748b",
+    },
+    certificateBackground: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: "120px",
+      height: "120px",
+      opacity: 0.05,
+      zIndex: 0,
+      transform: "translate(30%, -30%)",
+    },
+    certificatesGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+      gap: "1rem",
+      marginTop: "1rem",
+    },
+    badgePlatinum: {
+      backgroundColor: "#d8b4fe",
+      color: "#7e22ce",
+    },
+    badgeGold: {
+      backgroundColor: "#fef08a", 
+      color: "#ca8a04",
+    },
+    badgeSilver: {
+      backgroundColor: "#e2e8f0",
+      color: "#64748b",
+    },
+    badgeBronze: {
+      backgroundColor: "#fed7aa",
+      color: "#c2410c",
     },
   }
 
@@ -393,9 +570,7 @@ export default function Profiles({ userId }) {
                       <div style={styles.fieldValue}>{profile.speciality || "-"}</div>
                     </div>
                   </div>
-                </div>
-
-                <div style={styles.infoSection}>
+                </div>                <div style={styles.infoSection}>
                   <h3 style={styles.infoTitle}>
                     <span style={styles.infoIcon}>✅</span> Completed Quizzes
                   </h3>
@@ -410,6 +585,56 @@ export default function Profiles({ userId }) {
                         </li>
                       ))}
                     </ul>
+                  )}
+                </div>                <div style={styles.infoSection}>
+                  <h3 style={styles.infoTitle}>
+                    <span style={styles.infoIcon}>🏆</span> My Certificates
+                  </h3>
+                  {!Array.isArray(certificates) || certificates.length === 0 ? (
+                    <div style={styles.fieldValue}>No certificates earned yet. Complete quizzes to earn certificates!</div>
+                  ) : (
+                    <div style={styles.certificatesGrid}>
+                      {certificates.map((cert) => {
+                        // Determine badge type based on score
+                        let badgeStyle = styles.badgeBronze;
+                        let badgeText = "Bronze";
+                        
+                        if (cert.score >= 90) {
+                          badgeStyle = styles.badgePlatinum;
+                          badgeText = "Platinum";
+                        } else if (cert.score >= 80) {
+                          badgeStyle = styles.badgeGold;
+                          badgeText = "Gold";
+                        } else if (cert.score >= 70) {
+                          badgeStyle = styles.badgeSilver;
+                          badgeText = "Silver";
+                        }
+                        
+                        // Format date
+                        const certDate = new Date(cert.date).toLocaleDateString();
+                        
+                        return (
+                          <div key={cert._id || `cert-${Math.random()}`} style={styles.certificate}>
+                            <div style={styles.certificateBackground}>🏆</div>
+                            <div style={styles.certificateHeader}>
+                              <h4 style={styles.certificateTitle}>{cert.quiz_name || "Quiz"}</h4>
+                              <span style={styles.certificateDate}>{certDate}</span>
+                            </div>
+                            <div style={styles.certificateScore}>
+                              <div style={{...styles.certificateBadge, ...badgeStyle}}>
+                                <span style={styles.certificatePercent}>{cert.score}%</span>
+                                <span style={styles.certificateLabel}>{badgeText}</span>
+                              </div>
+                              <div style={styles.certificateDetails}>
+                                <div style={styles.certificateInfo}>
+                                  Answered {cert.correct_count || 0} out of {cert.questions_count || 0} questions correctly.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 

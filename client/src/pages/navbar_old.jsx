@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BookOpen, GraduationCap, Home, LogOut, Star, User } from 'lucide-react';
+import { useAuth } from '../Auth/AuthContext';
 
 // CSS styles included in the component
 const styles = `
@@ -322,28 +323,15 @@ const styles = `
 `;
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userId, setUserId] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
-  useEffect(() => {
-    // Check login status and if user is admin
-    const isUserLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-    const adminStatus = localStorage.getItem("admin") === "true";
-    const userIdFromStorage = localStorage.getItem("userId");
-
-    setIsLoggedIn(isUserLoggedIn);
-    setIsAdmin(adminStatus);
-    setUserId(userIdFromStorage);
-    console.log("Login status:", isUserLoggedIn, "Admin status:", adminStatus);
-  }, []);
+  const { userRole, userId, logout } = useAuth();
+  
+  const isLoggedIn = userRole !== 'guest';
+  const isAdmin = userRole === 'admin';
 
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("admin");
-    setIsLoggedIn(false);
-    setIsAdmin(false);
+    logout();
     navigate("/"); // Redirect after logout
   };
 
@@ -382,8 +370,7 @@ const Navbar = () => {
             </button>
 
             {/* Navigation Links */}
-            <nav className={`nav ${isMenuOpen ? 'open' : ''}`}>
-              <ul className="nav-list">
+            <nav className={`nav ${isMenuOpen ? 'open' : ''}`}>              <ul className="nav-list">
                 <li>
                   <a href="/HomePages" className="nav-link">
                     <Home />
@@ -393,53 +380,79 @@ const Navbar = () => {
 
                 {isLoggedIn && (
                   <>
-                    {isAdmin ? (
+                    {/* Links for both admin and normal users */}
+                    <li>
+                      <a href="/ai-courses" className="nav-link">
+                        <BookOpen />
+                        <span className="nav-link-text">AI Courses</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/favorites" className="nav-link">
+                        <Star />
+                        <span className="nav-link-text">Favorites</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a href={userId ? `/profile/${userId}` : "/"} className="nav-link">
+                        <User />
+                        <span className="nav-link-text">Profile</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/recommendations" className="nav-link">
+                        <Star />
+                        <span className="nav-link-text">Recommendations</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/quizzes" className="nav-link">
+                        <BookOpen />
+                        <span className="nav-link-text">Quizzes</span>
+                      </a>
+                    </li>
+                    
+                    {/* Admin-only links */}
+                    {isAdmin && (
                       <>
                         <li>
                           <a href="/HomePage" className="nav-link">
                             <GraduationCap />
-                            <span className="nav-link-text">Dashboard</span>
+                            <span className="nav-link-text">Admin Dashboard</span>
                           </a>
                         </li>
                         <li>
-                          <a href="/ai-courses" className="nav-link">
-                            <BookOpen />
-                            <span className="nav-link-text">AI Courses</span>
-                          </a>
-                        </li>
-                        <li>
-                          <a href="/favorites" className="nav-link">
-                            <Star />
-                            <span className="nav-link-text">Favorites</span>
-                          </a>
-                        </li>
-                        <li>
-                          <a href={userId ? `/profile/${userId}` : "/"} className="nav-link">
+                          <a href="/StudentTable" className="nav-link">
                             <User />
-                            <span className="nav-link-text">Profile</span>
-                          </a>
-                        </li>                         
-                        <li>
-                          <a href="/recommendations" className="nav-link">
-                            <Star />
-                            <span className="nav-link-text">Recommendations</span>
+                            <span className="nav-link-text">Manage Students</span>
                           </a>
                         </li>
                         <li>
-                          <a href="/quizzes" className="nav-link">
+                          <a href="/admin/courses" className="nav-link">
                             <BookOpen />
-                            <span className="nav-link-text">Quizzes</span>
+                            <span className="nav-link-text">Manage Courses</span>
+                          </a>
+                        </li>
+                        <li>
+                          <a href="/add-quiz" className="nav-link">
+                            <BookOpen />
+                            <span className="nav-link-text">Add Quiz</span>
                           </a>
                         </li>
                       </>
-                    ) : (
-                      <>
-                        <li>
-                          <a href="/HomePages" className="nav-link">
-                            <Home />
-                            <span className="nav-link-text">Home</span>
-                          </a>
-                        </li>
+                    )}
+                    
+                    {/* User-only link */}
+                    {!isAdmin && (
+                      <li>
+                        <a href="/newcourse" className="nav-link">
+                          <GraduationCap />
+                          <span className="nav-link-text">Generate New Course</span>
+                        </a>
+                      </li>
+                    )}
+                  </>
+                )}
                         <li>
                           <a href="/ai-courses" className="nav-link">
                             <BookOpen />
@@ -457,8 +470,7 @@ const Navbar = () => {
                             <User />
                             <span className="nav-link-text">Profile</span>
                           </a>
-                        </li>                         
-                        <li>
+                        </li>                         <li>
                           <a href="/recommendations" className="nav-link">
                             <Star />
                             <span className="nav-link-text">Recommendations</span>
